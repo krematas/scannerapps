@@ -1,0 +1,11 @@
+FROM scannerresearch/scanner:gpu-8.0-cudnn6
+WORKDIR /app
+
+# Build segment kernel
+COPY instance_segmentation/segment_op segment_op
+RUN cd segment_op && mkdir -p build && cd build && rm -fr * && cmake .. && make
+
+COPY config.toml /root/.scanner/config.toml
+
+COPY master.py .
+CMD python3 master.py

@@ -9,7 +9,7 @@ import argparse
 import pickle
 
 import time
-# import pycocotools.mask as mask_util
+import pycocotools.mask as mask_util
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
 parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
@@ -19,24 +19,24 @@ parser.add_argument('--bucket', default='', type=str)
 opt, _ = parser.parse_known_args()
 
 
-# @scannerpy.register_python_op(name='DetectronInstSegm')
-# def get_instances_from_detectron(config,
-#                                  frame: FrameType,
-#                                  boxes: bytes,
-#                                  segms: bytes,):
-#     boxes = pickle.loads(boxes)
-#     segms = pickle.loads(segms)
-#
-#     areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-#     sorted_inds = np.argsort(-areas)
-#
-#     instance_map = np.zeros((frame.shape[0], frame.shape[1]))
-#
-#     for ii, i in enumerate(sorted_inds):
-#         masks = mask_util.decode(segms[i])
-#         instance_map += (masks * (ii + 1))
-#
-#     return instance_map
+@scannerpy.register_python_op(name='DetectronInstSegm')
+def get_instances_from_detectron(config,
+                                 frame: FrameType,
+                                 boxes: bytes,
+                                 segms: bytes,):
+    boxes = pickle.loads(boxes)
+    segms = pickle.loads(segms)
+
+    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    sorted_inds = np.argsort(-areas)
+
+    instance_map = np.zeros((frame.shape[0], frame.shape[1]))
+
+    for ii, i in enumerate(sorted_inds):
+        masks = mask_util.decode(segms[i])
+        instance_map += (masks * (ii + 1))
+
+    return instance_map
 
 
 @scannerpy.register_python_op()

@@ -158,6 +158,8 @@ pass_detectron = db.ops.Pass(input=detectrondata)
 draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron, w=10, h=10)
 output_op = db.sinks.FrameColumn(columns={'frame': draw_detectron_class})
 
+print(len(pickle.dumps(detectron_data)))
+
 job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},

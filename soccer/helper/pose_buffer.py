@@ -20,24 +20,27 @@ opt, _ = parser.parse_known_args()
 
 
 @scannerpy.register_python_op(name='DetectronInstSegm')
-def get_instances_from_detectron(config,
-                                 image: FrameType,
-                                 detectrondata: bytes,
-                                 ) -> FrameType:
-    detectrondata = pickle.loads(detectrondata)
-    boxes = detectrondata['boxes']
-    # segms = detectrondata['segms']
+class DetectronInstSegm(scannerpy.Kernel):
+    def __init__(self, config):
+        self.w = config.args['w']
+        self.h = config.args['h']
 
-    # areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-    # sorted_inds = np.argsort(-areas)
+    def execute(self, image: FrameType, detectrondata: bytes) -> FrameType:
 
-    instance_map = np.zeros((100, 100))
+        detectrondata = pickle.loads(detectrondata)
+        # boxes = detectrondata['boxes']
+        # segms = detectrondata['segms']
 
-    # for ii, i in enumerate(sorted_inds):
-    #     masks = mask_util.decode(segms[i])
-    #     instance_map += (masks * (ii + 100))
+        # areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+        # sorted_inds = np.argsort(-areas)
 
-    return instance_map.astype(np.uint8)
+        instance_map = np.zeros((self.w, self.h))
+
+        # for ii, i in enumerate(sorted_inds):
+        #     masks = mask_util.decode(segms[i])
+        #     instance_map += (masks * (ii + 100))
+
+        return instance_map.astype(np.uint8)
 
 
 @scannerpy.register_python_op()
@@ -152,7 +155,7 @@ for fname in frame_names:
 detectrondata = db.sources.Python()
 pass_detectron = db.ops.Pass(input=detectrondata)
 
-draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron)
+draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron, w=10, h=10)
 output_op = db.sinks.FrameColumn(columns={'frame': draw_detectron_class})
 
 job = Job(

@@ -9,7 +9,7 @@ import argparse
 import pickle
 
 import time
-import pycocotools.mask as mask_util
+import cocoapi.PythonAPI.pycocotools.mask as mask_util
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
 parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
@@ -21,22 +21,23 @@ opt, _ = parser.parse_known_args()
 
 @scannerpy.register_python_op(name='DetectronInstSegm')
 def get_instances_from_detectron(config,
-                                 frame: FrameType,
-                                 boxes: bytes,
-                                 segms: bytes,):
-    boxes = pickle.loads(boxes)
-    segms = pickle.loads(segms)
+                                 image: FrameType,
+                                 detectrondata: bytes,
+                                 ) -> FrameType:
+    detectrondata = pickle.loads(detectrondata)
+    boxes = detectrondata['boxes']
+    # segms = detectrondata['segms']
 
-    areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-    sorted_inds = np.argsort(-areas)
+    # areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+    # sorted_inds = np.argsort(-areas)
 
-    instance_map = np.zeros((frame.shape[0], frame.shape[1]))
+    instance_map = np.zeros((100, 100))
 
-    for ii, i in enumerate(sorted_inds):
-        masks = mask_util.decode(segms[i])
-        instance_map += (masks * (ii + 1))
+    # for ii, i in enumerate(sorted_inds):
+    #     masks = mask_util.decode(segms[i])
+    #     instance_map += (masks * (ii + 100))
 
-    return instance_map
+    return instance_map.astype(np.uint8)
 
 
 @scannerpy.register_python_op()
@@ -108,31 +109,56 @@ with open(join(dataset, 'metadata', 'poses.p'), 'rb') as f:
 
 frame_names = list(openposes.keys())
 frame_names.sort()
+#
+# pose_data = []
+# for fname in frame_names:
+#     n_poses = len(openposes[fname])
+#     poses_in_frame = np.zeros((n_poses, 18, 3), dtype=np.float32)
+#     for i in range(n_poses):
+#         poses_in_frame[i, :, :] = openposes[fname][i]
+#     data = {'n_poses': n_poses, 'data': poses_in_frame}
+#     pose_data.append(data)
+#
+# data = db.sources.Python()
+# pass_data = db.ops.Pass(input=data)
+#
+# draw_poses_class = db.ops.DrawPosesClass(image=frame, poses=pass_data, h=2160, w=3840)
+# output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
+#
+# job = Job(
+#     op_args={
+#         encoded_image: {'paths': image_files, **params},
+#         data: {'data': pickle.dumps(pose_data)},
+#         output_op: 'example_resized55',
+#     })
+#
+# start = time.time()
+# [out_table] = db.run(output_op, [job], force=True)
+# end = time.time()
+#
+#
+# print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
+#
+#
+# out_table.column('frame').save_mp4(join(dataset, 'players', 'poses'))
 
-pose_data = []
+with open(join(dataset, 'metadata', 'detectron.p'), 'rb') as f:
+    detectron = pickle.load(f)
+
+detectron_data = []
 for fname in frame_names:
-    n_poses = len(openposes[fname])
-    poses_in_frame = np.zeros((n_poses, 18, 3), dtype=np.float32)
-    for i in range(n_poses):
-        poses_in_frame[i, :, :] = openposes[fname][i]
-    data = {'n_poses': n_poses, 'data': poses_in_frame}
-    pose_data.append(data)
-    # pose_data.append({'1'})
+    detectron_data.append({'boxes': detectron[fname]['boxes']})
 
-# aaa = pickle.dumps(pose_data)
-# bbb = pickle.loads(aaa)
+detectrondata = db.sources.Python()
+pass_detectron = db.ops.Pass(input=detectrondata)
 
-data = db.sources.Python()
-pass_data = db.ops.Pass(input=data)
-
-
-draw_poses_class = db.ops.DrawPosesClass(image=frame, poses=pass_data, h=2160, w=3840)
-output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
+draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron)
+output_op = db.sinks.FrameColumn(columns={'frame': draw_detectron_class})
 
 job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
-        data: {'data': pickle.dumps(pose_data)},
+        detectrondata: {'data': pickle.dumps(detectron_data)},
         output_op: 'example_resized55',
     })
 
@@ -140,6 +166,5 @@ start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 end = time.time()
 
-print('Total time for depth estimation in scanner: {0:.3f} sec'.format(end-start))
-
-out_table.column('frame').save_mp4(join(dataset, 'players', 'poses'))
+print('Total time for instance drawing in scanner: {0:.3f} sec'.format(end-start))
+# out_table.column('frame').save_mp4(join(dataset, 'players', 'segms'))

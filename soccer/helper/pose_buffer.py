@@ -19,7 +19,7 @@ parser.add_argument('--bucket', default='', type=str)
 opt, _ = parser.parse_known_args()
 
 
-@scannerpy.register_python_op(name='DetectronInstSegm')
+@scannerpy.register_python_op()
 class DetectronInstSegm(scannerpy.Kernel):
     def __init__(self, config):
         self.w = config.args['w']
@@ -28,19 +28,20 @@ class DetectronInstSegm(scannerpy.Kernel):
     def execute(self, image: FrameType, detectrondata: bytes) -> FrameType:
 
         detectrondata = pickle.loads(detectrondata)
-        # boxes = detectrondata['boxes']
-        # segms = detectrondata['segms']
+        boxes = detectrondata['boxes']
+        segms = detectrondata['segms']
+        print(detectrondata['id'])
 
-        # areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
-        # sorted_inds = np.argsort(-areas)
+        areas = (boxes[:, 2] - boxes[:, 0]) * (boxes[:, 3] - boxes[:, 1])
+        sorted_inds = np.argsort(-areas)
 
-        instance_map = np.zeros((self.w, self.h))
+        instance_map = np.zeros((image.shape[0], image.shape[1]), np.float32)
 
-        # for ii, i in enumerate(sorted_inds):
-        #     masks = mask_util.decode(segms[i])
-        #     instance_map += (masks * (ii + 100))
+        for ii, i in enumerate(sorted_inds):
+            masks = mask_util.decode(segms[i])
+            instance_map += (masks * (ii + 100))
 
-        return instance_map.astype(np.uint8)
+        return cv2.resize(instance_map.astype(np.uint8), (256, 256))
 
 
 @scannerpy.register_python_op()
@@ -56,8 +57,8 @@ class DrawPosesClass(scannerpy.Kernel):
     def execute(self, image: FrameType, poses: bytes) -> FrameType:
 
 
-        # output = np.zeros((self.h, self.w, 3), dtype=np.float32)
-        output = image.copy()
+        output = np.zeros((self.h, self.w, 3), dtype=np.float32)
+        # output = image.copy()
         poses = pickle.loads(poses)
         poses = poses['data']
         for i in range(poses.shape[0]):
@@ -150,12 +151,12 @@ with open(join(dataset, 'metadata', 'detectron.p'), 'rb') as f:
 
 detectron_data = []
 for fname in frame_names:
-    detectron_data.append({'boxes': detectron[fname]['boxes']})
+    detectron_data.append({'id': fname, 'boxes': detectron[fname]['boxes'], 'segms': detectron[fname]['segms']})
 
 detectrondata = db.sources.Python()
 pass_detectron = db.ops.Pass(input=detectrondata)
 
-draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron, w=10, h=10)
+draw_detectron_class = db.ops.DetectronInstSegm(image=frame, detectrondata=pass_detectron, w=3840//50, h=2160//50)
 output_op = db.sinks.FrameColumn(columns={'frame': draw_detectron_class})
 
 print(len(pickle.dumps(detectron_data)))
@@ -168,8 +169,8 @@ job = Job(
     })
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True)
+[out_table] = db.run(output_op, [job], force=True, io_packet_size=8, work_packet_size=8)
 end = time.time()
 
 print('Total time for instance drawing in scanner: {0:.3f} sec'.format(end-start))
-# out_table.column('frame').save_mp4(join(dataset, 'players', 'segms'))
+out_table.column('frame').save_mp4(join(dataset, 'players', 'segms'))

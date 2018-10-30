@@ -1,16 +1,10 @@
-import scannerpy
-import cv2
-from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
-
 from os.path import join
-import numpy as np
 import glob
 import argparse
-import pickle
 
 import time
-import cocoapi.PythonAPI.pycocotools.mask as mask_util
-from kernels import *
+from soccer.main.kernels import *
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
 parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
@@ -55,16 +49,20 @@ mask_frame = db.ops.ImageDecoder(img=encoded_mask)
 with open(join(dataset, 'metadata', 'poses.p'), 'rb') as f:
     openposes = pickle.load(f)
 
+with open(join(dataset, 'metadata', 'calib.p'), 'rb') as f:
+    calib_data = pickle.load(f)
+
 frame_names = list(openposes.keys())
 frame_names.sort()
 
 pose_data = []
 for fname in frame_names:
     n_poses = len(openposes[fname])
-    poses_in_frame = np.zeros((n_poses, 18, 3), dtype=np.float32)
+    poses_in_frame = []
     for i in range(n_poses):
-        poses_in_frame[i, :, :] = openposes[fname][i]
-    data = {'poses': poses_in_frame}
+        poses_in_frame.append(openposes[fname][i])
+    data = {'poses': poses_in_frame,
+            'A': calib_data[fname]['A'], 'R': calib_data[fname]['R'], 'T': calib_data[fname]['T']}
     pose_data.append(data)
 
 data = db.sources.Python()
@@ -73,13 +71,13 @@ pass_data = db.ops.Pass(input=data)
 
 # ======================================================================================================================
 # Scanner calls
-draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840)
+draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
 output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
 
 job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
-        encoded_mask: {'paths': mask_files},
+        encoded_mask: {'paths': mask_files, **params},
         data: {'data': pickle.dumps(pose_data)},
         output_op: 'example_resized55',
     })
@@ -87,7 +85,18 @@ job = Job(
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 end = time.time()
-
-
 print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
-out_table.column('frame').save_mp4(join(dataset, 'players', 'poses'))
+
+
+results = out_table.column('frame').load()
+for i, res in enumerate(results):
+    buff = pickle.loads(res)
+
+    for sel in range(10):
+        fig, ax = plt.subplots(1, 3)
+        ax[0].imshow(buff[sel]['img'])
+        ax[1].imshow(buff[sel]['pose_img'])
+        ax[2].imshow(buff[sel]['mask'])
+        plt.show()
+    break
+# out_table.column('frame').save_mp4(join(dataset, 'players', 'poses'))

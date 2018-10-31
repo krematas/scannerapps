@@ -72,7 +72,8 @@ pass_data = db.ops.Pass(input=data)
 # ======================================================================================================================
 # Scanner calls
 draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
-output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
+objdet_frame = db.ops.BinaryToFrame(data=draw_poses_class)
+output_op = db.sinks.FrameColumn(columns={'frame': objdet_frame})
 
 job = Job(
     op_args={

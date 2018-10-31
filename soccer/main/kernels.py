@@ -318,3 +318,10 @@ class CropPlayersClass(scannerpy.Kernel):
             out.append({'img': img_crop, 'pose_img': pose_img_crop, 'mask': mask_crop})
 
         return pickle.dumps(out)
+
+
+@scannerpy.register_python_op(name='BinaryToFrame')
+def detectron_vizualize(config,
+                        data: bytes) -> FrameType:
+        data = pickle.loads(data)
+        return data['img']

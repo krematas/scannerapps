@@ -4,7 +4,7 @@ from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
 
 import numpy as np
 import pickle
-
+import soccer.main.segment_op.build.segment_pb2 as messages
 
 def project(points3d, A, R, T, scale_factor=1.0, dtype=np.int32):
     """ Project a set of 3D points (Nx3 or 3XN) to a camera with parameters A, R T.
@@ -316,6 +316,10 @@ class CropPlayersClass(scannerpy.Kernel):
             mask_crop = mask[y1:y2, x1:x2]
 
             out.append({'img': img_crop, 'pose_img': pose_img_crop, 'mask': mask_crop})
+
+            # _img = messages.MyImage()
+            # pose_img = messages.MyImage()
+            # mask = messages.MyImage()
 
         return pickle.dumps(out)
 

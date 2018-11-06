@@ -1,6 +1,7 @@
 from os.path import join
 import glob
 import argparse
+import os
 
 import time
 from soccer.main.kernels import *
@@ -72,8 +73,8 @@ pass_data = db.ops.Pass(input=data)
 # ======================================================================================================================
 # Scanner calls
 draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
-objdet_frame = db.ops.BinaryToFrame(data=draw_poses_class)
-output_op = db.sinks.FrameColumn(columns={'frame': objdet_frame})
+# objdet_frame = db.ops.BinaryToFrame(data=draw_poses_class)
+output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
 
 job = Job(
     op_args={
@@ -85,11 +86,17 @@ job = Job(
 
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
+results = out_table.column('frame').load()
+# if not os.path.exists(join(dataset, 'scanner')):
+#     os.mkdir(join(dataset, 'scanner'))
+#
+# with open(join(dataset, 'scanner', 'players.pickle'), 'wb') as handle:
+#     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
 end = time.time()
 print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
 
 
-results = out_table.column('frame').load()
+
 for i, res in enumerate(results):
     buff = pickle.loads(res)
 

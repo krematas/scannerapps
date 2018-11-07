@@ -7,6 +7,8 @@ import time
 from soccer.main.kernels import *
 import matplotlib.pyplot as plt
 
+import soccer.main.segment_op.build.segment_pb2 as segment_pb2
+
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
 parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
 parser.add_argument('--visualize', action='store_true')
@@ -73,7 +75,6 @@ pass_data = db.ops.Pass(input=data)
 # ======================================================================================================================
 # Scanner calls
 draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
-# objdet_frame = db.ops.BinaryToFrame(data=draw_poses_class)
 output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
 
 job = Job(
@@ -87,20 +88,105 @@ job = Job(
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 results = out_table.column('frame').load()
-# if not os.path.exists(join(dataset, 'scanner')):
-#     os.mkdir(join(dataset, 'scanner'))
-#
-# with open(join(dataset, 'scanner', 'players.pickle'), 'wb') as handle:
-#     pickle.dump(results, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
 end = time.time()
 print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
+
+
+# ======================================================================================================================
+# Instance Segmentation
+# ======================================================================================================================
+
+
+data = []
+for i, res in enumerate(results):
+    buff = pickle.loads(res)
+    for sel in range(len(buff)):
+        h, w = buff[sel]['img'].shape[:2]
+
+        _img = segment_pb2.MyImage()
+        _img.image_data = np.ndarray.tobytes(buff[sel]['img'])
+        _img.w = w
+        _img.h = h
+
+        _pose_img = segment_pb2.MyImage()
+        _pose_img.image_data = np.ndarray.tobytes(buff[sel]['pose_img'])
+        _pose_img.w = w
+        _pose_img.h = h
+
+        data.append([_img.SerializeToString(), _pose_img.SerializeToString()])
+
+
+db.new_table('test', ['img', 'pose_img'], data, force=True)
+
+
+img = db.sources.FrameColumn()
+pose_img = db.sources.FrameColumn()
+
+cwd = os.path.dirname(os.path.abspath(__file__))
+if not os.path.isfile(os.path.join(cwd, 'segment_op/build/libsegment_op.so')):
+    print(
+        'You need to build the custom op first: \n'
+        '$ pushd {}/segment_op; mkdir build && cd build; cmake ..; make; popd'.
+        format(cwd))
+    exit()
+
+# To load a custom op into the Scanner runtime, we use db.load_op to open the
+# shared library we compiled. If the op takes arguments, it also optionally
+# takes a path to the generated python file for the arg protobuf.
+if opt.cloud:
+    db.load_op(
+        '/app/segment_op/build/libsegment_op.so',
+        os.path.join(cwd, 'segment_op/build/segment_pb2.py'))
+else:
+    db.load_op(
+        os.path.join(cwd, 'segment_op/build/libsegment_op.so'),
+        os.path.join(cwd, 'segment_op/build/segment_pb2.py'))
+
+model_path = 'model.yml.gz'
+
+my_segment_imageset_class = db.ops.MySegment(
+    frame=img, mask=pose_img,
+    w=128, h=128,
+    sigma1=1.0, sigma2=0.01,
+    model_path=model_path)
+output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
+
+job = Job(op_args={
+    img: db.table('test').column('img'),
+    pose_img: db.table('test').column('pose_img'),
+    output_op: 'example_resized'
+})
+
+
+start = time.time()
+[out_table] = db.run(output_op, [job], force=True)
+end = time.time()
+print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
 for i, res in enumerate(results):
     buff = pickle.loads(res)
+    break
 
-    for sel in range(10):
+    for sel in range(len(buff)):
         fig, ax = plt.subplots(1, 3)
         ax[0].imshow(buff[sel]['img'])
         ax[1].imshow(buff[sel]['pose_img'])

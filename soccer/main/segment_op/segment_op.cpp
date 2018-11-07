@@ -10,6 +10,7 @@
 #include "opencv2/core/utility.hpp"
 
 #include <iostream>               // for std::cout
+//#include "build/segment.pb.h"
 
 #include <Eigen/Sparse>
 typedef float var_t;
@@ -197,14 +198,28 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     check_frame(scanner::CPU_DEVICE, frame_col);
     check_frame(scanner::CPU_DEVICE, mask_col);
 
+    MyImage proto_image;
+    proto_image.ParseFromString(((char *)frame_col.buffer));
+
+    MyImage proto_mask;
+    proto_mask.ParseFromString(((char *)mask_col.buffer));
+
     auto& resized_frame_col = output_columns[0];
     scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
 
-    const scanner::Frame* frame = frame_col.as_const_frame();
-    cv::Mat image = scanner::frame_to_mat(frame);
+//    std::vector<byte> vectordata(proto_image.image_data().begin(),proto_image.image_data().end());
+//    cv::Mat data_mat(vectordata,true);
+    char const *c = proto_image.image_data().c_str();
+    cv::Mat image(cv::imdecode(c,1)); //put 0 if you want greyscale
 
-    const scanner::Frame* mask = mask_col.as_const_frame();
-    cv::Mat poseImage = scanner::frame_to_mat(mask);
+//    cv::Mat image = cv::imdecode(proto_image.image_data());
+    cv::Mat poseImage = cv::imdecode(proto_mask.image_data());
+
+//    const scanner::Frame* frame = frame_col.as_const_frame();
+//    cv::Mat image = scanner::frame_to_mat(frame);
+//
+//    const scanner::Frame* mask = mask_col.as_const_frame();
+//    cv::Mat poseImage = scanner::frame_to_mat(mask);
 
     image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
     var_t *imgData = (var_t*)(image.data);

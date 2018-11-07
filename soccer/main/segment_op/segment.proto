@@ -9,7 +9,5 @@ message MySegmentArgs {
 }
 
 message MyImage {
-  int32 w = 1;
-  int32 h = 2;
-  bytes image_data = 3;
+  bytes image_data = 1;
 }

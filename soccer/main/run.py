@@ -105,16 +105,16 @@ for i, res in enumerate(results):
         h, w = buff[sel]['img'].shape[:2]
 
         _img = segment_pb2.MyImage()
-        _img.image_data = np.ndarray.tobytes(buff[sel]['img'])
-        _img.w = w
-        _img.h = h
+        _img.image_data = np.ndarray.tobytes(buff[sel]['img'].astype(np.uint8))
 
         _pose_img = segment_pb2.MyImage()
-        _pose_img.image_data = np.ndarray.tobytes(buff[sel]['pose_img'])
-        _pose_img.w = w
-        _pose_img.h = h
+        _pose_img.image_data = np.ndarray.tobytes(buff[sel]['pose_img'].astype(np.uint8))
 
         data.append([_img.SerializeToString(), _pose_img.SerializeToString()])
+
+        if i == 0:
+            print(buff[sel]['img'].shape, buff[sel]['pose_img'].shape, len(_pose_img.image_data), len(_img.image_data), len(_img.SerializeToString()))
+            break
 
 
 db.new_table('test', ['img', 'pose_img'], data, force=True)

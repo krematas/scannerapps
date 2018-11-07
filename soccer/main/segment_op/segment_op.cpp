@@ -199,31 +199,29 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     check_frame(scanner::CPU_DEVICE, mask_col);
 
     MyImage proto_image;
-    proto_image.ParseFromString(((char *)frame_col.buffer));
+    proto_image.ParseFromArray(frame_col.buffer, frame_col.size);
 
     MyImage proto_mask;
-    proto_mask.ParseFromString(((char *)mask_col.buffer));
+    proto_mask.ParseFromArray(mask_col.buffer, mask_col.size);
+    std::cout<<frame_col.size << " - "<< mask_col.size<<std::endl;
 
     auto& resized_frame_col = output_columns[0];
     scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
 
-//    std::vector<byte> vectordata(proto_image.image_data().begin(),proto_image.image_data().end());
-//    cv::Mat data_mat(vectordata,true);
-    char const *c = proto_image.image_data().c_str();
-    cv::Mat image(cv::imdecode(c,1)); //put 0 if you want greyscale
 
-//    cv::Mat image = cv::imdecode(proto_image.image_data());
-    cv::Mat poseImage = cv::imdecode(proto_mask.image_data());
+    std::vector<uint8_t> bytes_img(proto_image.image_data().begin(), proto_image.image_data().end());
+    cv::Mat image = cv::imdecode(bytes_img, 1);
 
-//    const scanner::Frame* frame = frame_col.as_const_frame();
-//    cv::Mat image = scanner::frame_to_mat(frame);
-//
+    std::vector<uint8_t> bytes_pose(proto_image.image_data().begin(), proto_image.image_data().end());
+    cv::Mat poseImage = cv::imdecode(bytes_pose, 0);
+
+
 //    const scanner::Frame* mask = mask_col.as_const_frame();
 //    cv::Mat poseImage = scanner::frame_to_mat(mask);
-
+//
     image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
     var_t *imgData = (var_t*)(image.data);
-//    std::cout<<image.channels()<<std::endl;
+    std::cout<<proto_image.image_data().length()<< " - "<< proto_mask.image_data().length()<<std::endl;
 
 
     poseImage.convertTo(poseImage, cv::DataType<var_t>::type);

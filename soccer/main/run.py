@@ -14,6 +14,7 @@ parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
+parser.add_argument('--nframes', type=int, default=-1, help='Margin around the pose')
 opt, _ = parser.parse_known_args()
 
 
@@ -29,7 +30,7 @@ params = {'bucket': opt.bucket,
           'region': 'US'}
 
 
-total_files = 2
+total_files = opt.nframes
 # ======================================================================================================================
 # Images
 image_files = glob.glob(join(dataset, 'images', '*.jpg'))

@@ -29,10 +29,12 @@ params = {'bucket': opt.bucket,
           'region': 'US'}
 
 
+total_files = 2
 # ======================================================================================================================
 # Images
 image_files = glob.glob(join(dataset, 'images', '*.jpg'))
 image_files.sort()
+image_files = image_files[:total_files]
 
 encoded_image = db.sources.Files(**params)
 frame = db.ops.ImageDecoder(img=encoded_image)
@@ -42,6 +44,7 @@ frame = db.ops.ImageDecoder(img=encoded_image)
 # Masks
 mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
 mask_files.sort()
+mask_files = mask_files[:total_files]
 
 encoded_mask = db.sources.Files(**params)
 mask_frame = db.ops.ImageDecoder(img=encoded_mask)
@@ -57,6 +60,8 @@ with open(join(dataset, 'metadata', 'calib.p'), 'rb') as f:
 
 frame_names = list(openposes.keys())
 frame_names.sort()
+
+frame_names = frame_names[:total_files]
 
 pose_data = []
 for fname in frame_names:
@@ -105,16 +110,20 @@ for i, res in enumerate(results):
         h, w = buff[sel]['img'].shape[:2]
 
         _img = segment_pb2.MyImage()
-        _img.image_data = np.ndarray.tobytes(buff[sel]['img'].astype(np.uint8))
+        _, buffer = cv2.imencode('.jpg', buff[sel]['img'].astype(np.uint8))
+        _img.image_data = bytes(buffer)
+        # _img.image_data = np.ndarray.tobytes(buff[sel]['img'].astype(np.uint8))
 
         _pose_img = segment_pb2.MyImage()
-        _pose_img.image_data = np.ndarray.tobytes(buff[sel]['pose_img'].astype(np.uint8))
+        _, buffer = cv2.imencode('.png', buff[sel]['pose_img'].astype(np.uint8))
+        _pose_img.image_data = bytes(buffer)
+        # _pose_img.image_data = np.ndarray.tobytes(buff[sel]['pose_img'].astype(np.uint8))
 
         data.append([_img.SerializeToString(), _pose_img.SerializeToString()])
 
-        if i == 0:
-            print(buff[sel]['img'].shape, buff[sel]['pose_img'].shape, len(_pose_img.image_data), len(_img.image_data), len(_img.SerializeToString()))
-            break
+        # if i == 0:
+        #     print(buff[sel]['img'].shape, buff[sel]['pose_img'].shape, len(_pose_img.image_data), len(_img.image_data), len(_img.SerializeToString()))
+        #     break
 
 
 db.new_table('test', ['img', 'pose_img'], data, force=True)
@@ -123,7 +132,8 @@ db.new_table('test', ['img', 'pose_img'], data, force=True)
 img = db.sources.FrameColumn()
 pose_img = db.sources.FrameColumn()
 
-cwd = os.path.dirname(os.path.abspath(__file__))
+# cwd = os.path.dirname(os.path.abspath(__file__))
+cwd = '/home/krematas/code/scannerapps/soccer/main'
 if not os.path.isfile(os.path.join(cwd, 'segment_op/build/libsegment_op.so')):
     print(
         'You need to build the custom op first: \n'
@@ -163,34 +173,26 @@ start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
+out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm2.mp4'))
+
+# results = out_table.column('frame').load()
 
 
 
+# for i, res in enumerate(results):
+#     fig, ax = plt.subplots(1, 1)
+#     ax.imshow(res)
+#     plt.show()
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-for i, res in enumerate(results):
-    buff = pickle.loads(res)
-    break
-
-    for sel in range(len(buff)):
-        fig, ax = plt.subplots(1, 3)
-        ax[0].imshow(buff[sel]['img'])
-        ax[1].imshow(buff[sel]['pose_img'])
-        ax[2].imshow(buff[sel]['mask'])
-        plt.show()
-    break
+# for i, res in enumerate(results):
+#     buff = pickle.loads(res)
+#     break
+#
+#     for sel in range(len(buff)):
+#         fig, ax = plt.subplots(1, 3)
+#         ax[0].imshow(buff[sel]['img'])
+#         ax[1].imshow(buff[sel]['pose_img'])
+#         ax[2].imshow(buff[sel]['mask'])
+#         plt.show()
+#     break
 # out_table.column('frame').save_mp4(join(dataset, 'players', 'poses'))

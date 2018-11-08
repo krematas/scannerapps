@@ -203,7 +203,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 
     MyImage proto_mask;
     proto_mask.ParseFromArray(mask_col.buffer, mask_col.size);
-    std::cout<<frame_col.size << " - "<< mask_col.size<<std::endl;
+//    std::cout<<frame_col.size << " - "<< mask_col.size<<std::endl;
 
     auto& resized_frame_col = output_columns[0];
     scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
@@ -212,8 +212,9 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     std::vector<uint8_t> bytes_img(proto_image.image_data().begin(), proto_image.image_data().end());
     cv::Mat image = cv::imdecode(bytes_img, 1);
 
-    std::vector<uint8_t> bytes_pose(proto_image.image_data().begin(), proto_image.image_data().end());
+    std::vector<uint8_t> bytes_pose(proto_mask.image_data().begin(), proto_mask.image_data().end());
     cv::Mat poseImage = cv::imdecode(bytes_pose, 0);
+
 
 
 //    const scanner::Frame* mask = mask_col.as_const_frame();
@@ -221,8 +222,11 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 //
     image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
     var_t *imgData = (var_t*)(image.data);
-    std::cout<<proto_image.image_data().length()<< " - "<< proto_mask.image_data().length()<<std::endl;
 
+//    std::cout<<image.channels()<< " - "<<image.rows<<std::endl;
+//    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+//    cv::imshow( "Display window", image );                   // Show our image inside it.
+//    cv::waitKey(0);
 
     poseImage.convertTo(poseImage, cv::DataType<var_t>::type);
     var_t *poseData = (var_t*)(poseImage.data);
@@ -271,6 +275,14 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     cv::Mat output = scanner::frame_to_mat(resized_frame);
 
     cv::resize(new_mask, output, cv::Size(width_, height_));
+
+    image.convertTo(image, CV_8UC3);
+
+//    std::cout<<image.rows<< " - "<<output.rows<<std::endl;
+//    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+//    cv::imshow( "Display window", output );                   // Show our image inside it.
+//    cv::waitKey(0);
+
 
     scanner::insert_frame(resized_frame_col, resized_frame);
   }

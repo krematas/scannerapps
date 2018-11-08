@@ -14,7 +14,7 @@ parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
-parser.add_argument('--nframes', type=int, default=-1, help='Margin around the pose')
+parser.add_argument('--nframes', type=int, default=5, help='Margin around the pose')
 opt, _ = parser.parse_known_args()
 
 
@@ -31,72 +31,82 @@ params = {'bucket': opt.bucket,
 
 
 total_files = opt.nframes
-# ======================================================================================================================
-# Images
-image_files = glob.glob(join(dataset, 'images', '*.jpg'))
-image_files.sort()
-image_files = image_files[:total_files]
+file_to_save = '/home/krematas/Desktop/tmp.p'
 
-encoded_image = db.sources.Files(**params)
-frame = db.ops.ImageDecoder(img=encoded_image)
+if not os.path.exists(file_to_save):
+    # ======================================================================================================================
+    # Images
+    image_files = glob.glob(join(dataset, 'images', '*.jpg'))
+    image_files.sort()
+    image_files = image_files[:total_files]
 
-
-# ======================================================================================================================
-# Masks
-mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
-mask_files.sort()
-mask_files = mask_files[:total_files]
-
-encoded_mask = db.sources.Files(**params)
-mask_frame = db.ops.ImageDecoder(img=encoded_mask)
+    encoded_image = db.sources.Files(**params)
+    frame = db.ops.ImageDecoder(img=encoded_image)
 
 
-# ======================================================================================================================
-# Metadata
-with open(join(dataset, 'metadata', 'poses.p'), 'rb') as f:
-    openposes = pickle.load(f)
+    # ======================================================================================================================
+    # Masks
+    mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
+    mask_files.sort()
+    mask_files = mask_files[:total_files]
 
-with open(join(dataset, 'metadata', 'calib.p'), 'rb') as f:
-    calib_data = pickle.load(f)
-
-frame_names = list(openposes.keys())
-frame_names.sort()
-
-frame_names = frame_names[:total_files]
-
-pose_data = []
-for fname in frame_names:
-    n_poses = len(openposes[fname])
-    poses_in_frame = []
-    for i in range(n_poses):
-        poses_in_frame.append(openposes[fname][i])
-    data = {'poses': poses_in_frame,
-            'A': calib_data[fname]['A'], 'R': calib_data[fname]['R'], 'T': calib_data[fname]['T']}
-    pose_data.append(data)
-
-data = db.sources.Python()
-pass_data = db.ops.Pass(input=data)
+    encoded_mask = db.sources.Files(**params)
+    mask_frame = db.ops.ImageDecoder(img=encoded_mask)
 
 
-# ======================================================================================================================
-# Scanner calls
-draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
-output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
+    # ======================================================================================================================
+    # Metadata
+    with open(join(dataset, 'metadata', 'poses.p'), 'rb') as f:
+        openposes = pickle.load(f)
 
-job = Job(
-    op_args={
-        encoded_image: {'paths': image_files, **params},
-        encoded_mask: {'paths': mask_files, **params},
-        data: {'data': pickle.dumps(pose_data)},
-        output_op: 'example_resized55',
-    })
+    with open(join(dataset, 'metadata', 'calib.p'), 'rb') as f:
+        calib_data = pickle.load(f)
 
-start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
-results = out_table.column('frame').load()
+    frame_names = list(openposes.keys())
+    frame_names.sort()
 
-end = time.time()
-print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
+    frame_names = frame_names[:total_files]
+
+    pose_data = []
+    for fname in frame_names:
+        n_poses = len(openposes[fname])
+        poses_in_frame = []
+        for i in range(n_poses):
+            poses_in_frame.append(openposes[fname][i])
+        data = {'poses': poses_in_frame,
+                'A': calib_data[fname]['A'], 'R': calib_data[fname]['R'], 'T': calib_data[fname]['T']}
+        pose_data.append(data)
+
+    data = db.sources.Python()
+    pass_data = db.ops.Pass(input=data)
+
+
+    # ======================================================================================================================
+    # Scanner calls
+    draw_poses_class = db.ops.CropPlayersClass(image=frame, mask=mask_frame, metadata=pass_data, h=2160, w=3840, margin=0)
+    output_op = db.sinks.FrameColumn(columns={'frame': draw_poses_class})
+
+    job = Job(
+        op_args={
+            encoded_image: {'paths': image_files, **params},
+            encoded_mask: {'paths': mask_files, **params},
+            data: {'data': pickle.dumps(pose_data)},
+            output_op: 'example_resized55',
+        })
+
+
+    start = time.time()
+    [out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
+    results = out_table.column('frame').load()
+
+    with open(file_to_save, 'wb') as f:
+        pickle.dump([res for res in results], f)
+    end = time.time()
+    print('Total time for pose drawing in scanner: {0:.3f} sec'.format(end-start))
+else:
+    print('Loading table')
+    with open(file_to_save, 'rb') as f:
+        results = pickle.load(f)
 
 
 # ======================================================================================================================
@@ -109,6 +119,10 @@ for i, res in enumerate(results):
     buff = pickle.loads(res)
     for sel in range(len(buff)):
         h, w = buff[sel]['img'].shape[:2]
+
+        # if sel==0 and i == 1:
+        #     plt.imshow(buff[sel]['img'])
+        #     plt.show()
 
         _img = segment_pb2.MyImage()
         _, buffer = cv2.imencode('.jpg', buff[sel]['img'].astype(np.uint8))
@@ -130,8 +144,8 @@ for i, res in enumerate(results):
 db.new_table('test', ['img', 'pose_img'], data, force=True)
 
 
-img = db.sources.FrameColumn()
-pose_img = db.sources.FrameColumn()
+img = db.sources.FrameColumn(**params)
+pose_img = db.sources.FrameColumn(**params)
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
 cwd = '/home/krematas/code/scannerapps/soccer/main'
@@ -171,7 +185,7 @@ job = Job(op_args={
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
+[out_table] = db.run(output_op, [job], force=True)
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
 # out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm2.mp4'))

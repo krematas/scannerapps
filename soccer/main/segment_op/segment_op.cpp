@@ -198,16 +198,16 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     check_frame(scanner::CPU_DEVICE, frame_col);
     check_frame(scanner::CPU_DEVICE, mask_col);
 
+    // Allocate a frame for the resized output frame
+    auto& resized_frame_col = output_columns[0];
+    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
+
+
     MyImage proto_image;
     proto_image.ParseFromArray(frame_col.buffer, frame_col.size);
 
     MyImage proto_mask;
     proto_mask.ParseFromArray(mask_col.buffer, mask_col.size);
-//    std::cout<<frame_col.size << " - "<< mask_col.size<<std::endl;
-
-    auto& resized_frame_col = output_columns[0];
-    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
-
 
     std::vector<uint8_t> bytes_img(proto_image.image_data().begin(), proto_image.image_data().end());
     cv::Mat image = cv::imdecode(bytes_img, 1);
@@ -216,66 +216,44 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     cv::Mat poseImage = cv::imdecode(bytes_pose, 0);
 
 
-
-//    const scanner::Frame* mask = mask_col.as_const_frame();
-//    cv::Mat poseImage = scanner::frame_to_mat(mask);
+//    image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
+//    var_t *imgData = (var_t*)(image.data);
 //
-    image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
-    var_t *imgData = (var_t*)(image.data);
-
-//    std::cout<<image.channels()<< " - "<<image.rows<<std::endl;
-//    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
-//    cv::imshow( "Display window", image );                   // Show our image inside it.
-//    cv::waitKey(0);
-
-    poseImage.convertTo(poseImage, cv::DataType<var_t>::type);
-    var_t *poseData = (var_t*)(poseImage.data);
-//    std::cout<<poseImage.channels()<<std::endl;
-    //
-    cv::Mat img2;
-    image.copyTo(img2);
-    img2.convertTo(img2, cv::DataType<var_t>::type);
-    cv::Mat edges(img2.size(), img2.type());
-
-    pDollar_->detectEdges(img2, edges);
-//    std::cout<<edges.channels()<<std::endl;
-
-//    std::cout<<" -------------------------- "<<std::endl<<std::endl;
-    int height = image.rows;
-    int width = image.cols;
-
-    var_t *edgesData = (var_t*)(edges.data);
-
-    var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
-
-    // cv::Mat new_mask(height, width, cv::DataType<var_t>::type, segm_output);
-
-    //copy vector to mat
-    // std::cout<<edges.size()<<edges.type()<<std::endl;
-
-    cv::Mat new_mask(height, width, CV_8U);
-    for(int i=0; i<height; i++) {
-        for (int j = 0; j < width; j++) {
-          // std::cout<<segm_output[i*width+j]<<std::endl;
-            if(segm_output[i*width+j] > 1.5)
-                new_mask.at<uchar>(i,j) = 255;
-            else
-                new_mask.at<uchar>(i,j) = 0;
-        }
-    }
+//    poseImage.convertTo(poseImage, cv::DataType<var_t>::type);
+//    var_t *poseData = (var_t*)(poseImage.data);
+//
+//    cv::Mat img2;
+//    image.copyTo(img2);
+//    img2.convertTo(img2, cv::DataType<var_t>::type);
+//    cv::Mat edges(img2.size(), img2.type());
+//
+//    pDollar_->detectEdges(img2, edges);
+//
+//    int height = image.rows;
+//    int width = image.cols;
+//
+//    var_t *edgesData = (var_t*)(edges.data);
+//
+//    var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
+//
+//    cv::Mat new_mask(height, width, CV_8U);
+//    for(int i=0; i<height; i++) {
+//        for (int j = 0; j < width; j++) {
+//            if(segm_output[i*width+j] > 1.5)
+//                new_mask.at<uchar>(i,j) = 255;
+//            else
+//                new_mask.at<uchar>(i,j) = 0;
+//        }
+//    }
+//
+//
+//    cv::cvtColor(new_mask, new_mask, cv::COLOR_GRAY2BGR);
 
 
-    // new_mask.convertTo(new_mask, CV_8UC3, 255.0);
-    // cv::Mat output_img;
-    // edges.convertTo(output_img, cv::DataType<uint8>::type);
-    cv::cvtColor(new_mask, new_mask, cv::COLOR_GRAY2BGR);
-
-    // Allocate a frame for the resized output frame
     scanner::Frame* resized_frame = scanner::new_frame(scanner::CPU_DEVICE, output_frame_info);
     cv::Mat output = scanner::frame_to_mat(resized_frame);
 
-    cv::resize(new_mask, output, cv::Size(width_, height_));
-
+    cv::resize(image, output, cv::Size(width_, height_));
     image.convertTo(image, CV_8UC3);
 
 //    std::cout<<image.rows<< " - "<<output.rows<<std::endl;

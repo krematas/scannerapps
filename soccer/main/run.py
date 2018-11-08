@@ -92,7 +92,7 @@ job = Job(
     })
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
 results = out_table.column('frame').load()
 
 end = time.time()
@@ -171,7 +171,7 @@ job = Job(op_args={
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
 # out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm2.mp4'))

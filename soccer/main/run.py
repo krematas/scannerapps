@@ -5,7 +5,7 @@ import os
 
 import time
 from soccer.main.kernels import *
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 import soccer.main.segment_op.build.segment_pb2 as segment_pb2
 
@@ -174,7 +174,7 @@ start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
-out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm2.mp4'))
+# out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm2.mp4'))
 
 # results = out_table.column('frame').load()
 

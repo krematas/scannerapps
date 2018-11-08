@@ -136,16 +136,16 @@ for i, res in enumerate(results):
 
         data.append([_img.SerializeToString(), _pose_img.SerializeToString()])
 
-        # if i == 0:
-        #     print(buff[sel]['img'].shape, buff[sel]['pose_img'].shape, len(_pose_img.image_data), len(_img.image_data), len(_img.SerializeToString()))
-        #     break
+        if i == 0:
+            print(buff[sel]['img'].shape, buff[sel]['pose_img'].shape, len(_pose_img.image_data), len(_img.image_data), len(_img.SerializeToString()))
+            break
 
 
 db.new_table('test', ['img', 'pose_img'], data, force=True)
 
 
-img = db.sources.FrameColumn(**params)
-pose_img = db.sources.FrameColumn(**params)
+img = db.sources.FrameColumn()
+pose_img = db.sources.FrameColumn()
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
 cwd = '/home/krematas/code/scannerapps/soccer/main'

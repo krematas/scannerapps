@@ -180,8 +180,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     height_ = args.h();
     sigma1 = args.sigma1();
     sigma2 = args.sigma2();
-    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(
-        args.model_path());
+    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
   }
 
   // Execute is the core computation of the kernel. It maps a batch of rows
@@ -205,15 +204,16 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 
     MyImage proto_image;
     proto_image.ParseFromArray(frame_col.buffer, frame_col.size);
-
-    MyImage proto_mask;
-    proto_mask.ParseFromArray(mask_col.buffer, mask_col.size);
-
+    std::cout<<frame_col.size<<std::endl;
+//
+//    MyImage proto_mask;
+//    proto_mask.ParseFromArray(mask_col.buffer, mask_col.size);
+//
     std::vector<uint8_t> bytes_img(proto_image.image_data().begin(), proto_image.image_data().end());
     cv::Mat image = cv::imdecode(bytes_img, 1);
-
-    std::vector<uint8_t> bytes_pose(proto_mask.image_data().begin(), proto_mask.image_data().end());
-    cv::Mat poseImage = cv::imdecode(bytes_pose, 0);
+//
+//    std::vector<uint8_t> bytes_pose(proto_mask.image_data().begin(), proto_mask.image_data().end());
+//    cv::Mat poseImage = cv::imdecode(bytes_pose, 0);
 
 
 //    image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
@@ -254,7 +254,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     cv::Mat output = scanner::frame_to_mat(resized_frame);
 
     cv::resize(image, output, cv::Size(width_, height_));
-    image.convertTo(image, CV_8UC3);
+//    image.convertTo(image, CV_8UC3);
 
 //    std::cout<<image.rows<< " - "<<output.rows<<std::endl;
 //    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.

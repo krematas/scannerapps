@@ -47,7 +47,7 @@ frame = db.ops.ImageDecoder(img=encoded_image)
 # ======================================================================================================================
 # Instances
 # ======================================================================================================================
-file_to_save = '/home/krematas/Desktop/tmp.p'
+file_to_save = join(opt.path_to_data, 'tmp.p')
 with open(file_to_save, 'rb') as f:
     results = pickle.load(f)
 

@@ -210,6 +210,8 @@ def draw_field(A, R, T, h, w):
         intersect0 = img_polygon.intersection(linea)
         if not intersect0.is_empty:
             pts = np.array(list(list(intersect0.coords)), dtype=np.int32)
+            if pts.shape[0] < 2:
+                continue
             cv2.line(canvas, (pts[0, 0], pts[0, 1]), (pts[1, 0], pts[1, 1]), (255, 255, 255))
 
         intersect0 = img_polygon.intersection(lineb)
@@ -228,6 +230,8 @@ def draw_field(A, R, T, h, w):
         intersect0 = img_polygon.intersection(lined)
         if not intersect0.is_empty:
             pts = np.array(list(list(intersect0.coords)), dtype=np.int32)
+            if pts.shape[0] < 2:
+                continue
             cv2.line(canvas, (pts[0, 0], pts[0, 1]), (pts[1, 0], pts[1, 1]), (255, 255, 255))
 
     # Mid line

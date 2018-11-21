@@ -11,9 +11,20 @@ import subprocess
 import os.path
 import numpy as np
 import time
-import utils as utils
+import soccer.calibration.utils as utils
 import matplotlib.pyplot as plt
 import pickle
+from tqdm import tqdm
+import argparse
+
+parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
+parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
+parser.add_argument('--visualize', action='store_true')
+parser.add_argument('--cloud', action='store_true')
+parser.add_argument('--bucket', default='', type=str)
+parser.add_argument('--nframes', type=int, default=5, help='Margin around the pose')
+opt, _ = parser.parse_known_args()
+
 
 @scannerpy.register_python_op()
 class DistanceTransformClass(scannerpy.Kernel):
@@ -39,16 +50,15 @@ class DistanceTransformClass(scannerpy.Kernel):
         return pickle.dumps(dist_transf)
 
 
-path_to_data = '/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018'
+path_to_data = opt.path_to_data
 dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt'), join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland'), join(path_to_data, 'ahmed-musa-2nd-goal-nigeria-iceland')]
 dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
-bucket = ''
 
 db = Database()
 
 config = db.config.config['storage']
-params = {'bucket': bucket,
+params = {'bucket': opt.bucket,
           'storage_type': config['type'],
           'endpoint': 'storage.googleapis.com',
           'region': 'US'}
@@ -100,3 +110,44 @@ start = time.time()
 [out_table] = db.run(output_op, [job], force=True)
 end = time.time()
 print('scanner distance transform: {0:.4f}'.format(end-start))
+
+
+# ======================================================================================================================
+results = out_table.column('frame').load()
+
+
+A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
+h, w = 1080, 1920
+
+start = time.time()
+for j, res in enumerate(tqdm(results)):
+    dist_transf = pickle.loads(res)
+
+    template, field_mask = utils.draw_field(A, R, T, h, w)
+
+    II, JJ = (template > 0).nonzero()
+    synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
+
+    field3d = utils.plane_points_to_3d(synth_field2d, A, R, T)
+
+    A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
+
+    # frame = cv2.imread(imagename_list[i][j])[:, :, ::-1]
+    # rgb = frame.copy()
+    # canvas, mask = utils.draw_field(A, R, T, h, w)
+    # canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+    # rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+    #
+    # # result = np.dstack((template, template, template))*255
+    #
+    # out = rgb.astype(np.uint8)
+    #
+    # plt.imshow(out)
+    # plt.show()
+    #
+    # if j == 10:
+    #     break
+
+end = time.time()
+print('calibration: {0:.4f}'.format(end - start))
+

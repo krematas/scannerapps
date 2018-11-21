@@ -55,7 +55,9 @@ dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-4
 dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
 
-db = Database()
+master = 'localhost:5001'
+workers = ['localhost:{:d}'.format(d) for d in range(5002, 5010)]
+db = Database(master=master, workers=workers)
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,
@@ -114,7 +116,7 @@ print('scanner distance transform: {0:.4f}'.format(end-start))
 
 # ======================================================================================================================
 results = out_table.column('frame').load()
-dist_transf_pickles = [res for res in enumerate(results)]
+dist_transf_pickles = [res for res in results]
 
 A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
 h, w = 1080, 1920

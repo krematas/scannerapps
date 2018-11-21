@@ -56,7 +56,7 @@ dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
 
 master = 'localhost:5001'
-workers = ['localhost:{:d}'.format(d) for d in range(5002, 5010)]
+workers = ['localhost:{:d}'.format(d) for d in range(5002, 5030)]
 db = Database(master=master, workers=workers)
 
 config = db.config.config['storage']
@@ -122,8 +122,7 @@ A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
 h, w = 1080, 1920
 
 start = time.time()
-for j, res in enumerate(dist_transf_pickles):
-    print(j)
+for j, res in enumerate(tqdm(dist_transf_pickles)):
     dist_transf = pickle.loads(res)
 
     template, field_mask = utils.draw_field(A, R, T, h, w)

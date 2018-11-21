@@ -56,7 +56,7 @@ dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
 
 master = 'localhost:5001'
-workers = ['localhost:{:d}'.format(d) for d in range(5002, 5070)]
+workers = ['localhost:{:d}'.format(d) for d in range(5002, 5050)]
 db = Database(master=master, workers=workers)
 
 config = db.config.config['storage']

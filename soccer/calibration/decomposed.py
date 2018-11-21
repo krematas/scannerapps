@@ -109,7 +109,7 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=8)
+[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=1, work_packet_size=4, io_packet_size=8)
 end = time.time()
 print('scanner distance transform: {0:.4f}'.format(end-start))
 

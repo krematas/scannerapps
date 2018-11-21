@@ -18,7 +18,7 @@ from tqdm import tqdm
 import argparse
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
-parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
+parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/')
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
@@ -107,20 +107,21 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True)
+[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=8)
 end = time.time()
 print('scanner distance transform: {0:.4f}'.format(end-start))
 
 
 # ======================================================================================================================
 results = out_table.column('frame').load()
-
+dist_transf_pickles = [res for res in enumerate(results)]
 
 A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
 h, w = 1080, 1920
 
 start = time.time()
-for j, res in enumerate(tqdm(results)):
+for j, res in enumerate(dist_transf_pickles):
+    print(j)
     dist_transf = pickle.loads(res)
 
     template, field_mask = utils.draw_field(A, R, T, h, w)

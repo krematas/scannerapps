@@ -56,7 +56,7 @@ dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
 
 master = 'localhost:5001'
-workers = ['localhost:{:d}'.format(d) for d in range(5002, 5050)]
+workers = ['localhost:{:d}'.format(d) for d in range(5002, 5030)]
 db = Database(master=master, workers=workers)
 
 config = db.config.config['storage']
@@ -109,7 +109,7 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=1, work_packet_size=1, io_packet_size=2)
+[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=1, work_packet_size=2, io_packet_size=4)
 end = time.time()
 print('scanner distance transform: {0:.4f}'.format(end-start))
 

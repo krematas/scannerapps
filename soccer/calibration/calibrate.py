@@ -5,6 +5,7 @@ import glob
 from os.path import join, basename
 from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
 from scannerpy.stdlib import pipelines
+from skimage.morphology import medial_axis
 
 import subprocess
 import os.path
@@ -42,12 +43,15 @@ class CalibrationClass(scannerpy.Kernel):
     # execute is the core computation routine maps inputs to outputs, e.g. here resizes an input
     # frame to a smaller output frame.
     def execute(self, frame: FrameType, mask: FrameType) -> FrameType:
-        edge_sfactor = 0.5
+        edge_sfactor = 1.0
         edges = utils.robust_edge_detection(cv2.resize(frame[:, :, ::-1], None, fx=edge_sfactor, fy=edge_sfactor))
-        edges = cv2.resize(edges, None, fx=1. / edge_sfactor, fy=1. / edge_sfactor)
-        edges = cv2.Canny(edges.astype(np.uint8) * 255, 100, 200) / 255.0
+        skel = medial_axis(edges, return_distance=False)
 
-        mask = cv2.dilate(mask[:, :, 0], np.ones((25, 25), dtype=np.uint8))
+        edges = skel.astype(np.uint8)
+        # edges = cv2.resize(edges, None, fx=1. / edge_sfactor, fy=1. / edge_sfactor)
+        # edges = cv2.Canny(edges.astype(np.uint8) * 255, 100, 200) / 255.0
+
+        mask = cv2.dilate(mask[:, :, 0], np.ones((25, 25), dtype=np.uint8))/255
 
         edges = edges * (1 - mask)
         dist_transf = cv2.distanceTransform((1 - edges).astype(np.uint8), cv2.DIST_L2, 0)
@@ -75,7 +79,9 @@ class CalibrationClass(scannerpy.Kernel):
 
 
 path_to_data = '/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018'
-dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt')]
+dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt'), join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland'), join(path_to_data, 'ahmed-musa-2nd-goal-nigeria-iceland')]
+dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
+
 bucket = ''
 
 db = Database()
@@ -110,7 +116,7 @@ for dataset in dataset_list:
     calibs.append(cam_data)
 
 
-input_table, failed = db.ingest_videos(video_list_scanner, force=True)
+# input_table, failed = db.ingest_videos(video_list_scanner, force=True)
 
 
 frame = db.sources.FrameColumn()
@@ -123,7 +129,7 @@ encoded_mask = db.sources.Files(**params)
 frame_mask = db.ops.ImageDecoder(img=encoded_mask)
 
 
-i = 1
+i = 0
 calibrate_video_class = db.ops.CalibrationClass(frame=frame_img, mask=frame_mask)
 output_op = db.sinks.FrameColumn(columns={'frame': calibrate_video_class})
 

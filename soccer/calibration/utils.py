@@ -353,7 +353,7 @@ def calibrate_camera_dist_transf(A, R, T, dist_transf, points3d):
     params = np.hstack((theta_x, theta_y, theta_z, fx, T[0, 0], T[1, 0], T[2, 0]))
 
     res_ = minimize(_fun_distance_transform, params, args=(dist_transf, points3d),
-                    method='Powell', options={'disp': False, 'maxiter': 5000})
+                    method='Powell', options={'disp': False, 'maxfev': 10})
     result = res_.x
 
     theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = result

@@ -2,9 +2,144 @@ import cv2
 import numpy as np
 from shapely.geometry import LineString, Polygon
 from scipy.optimize import minimize
+import sys
+import struct
 
 
 W, H = 104.73, 67.74
+
+
+def ply_to_numpy(vertex_data):
+
+    vertex = np.zeros((len(vertex_data), 3))
+    color = np.zeros((len(vertex_data), 3))
+    if 'nx' in vertex_data[0]:
+        normals = np.zeros((len(vertex_data), 3))
+    else:
+        normals = None
+
+    for i in range(0, len(vertex_data)):
+        vertex[i, :] = np.array([vertex_data[i]['x'], vertex_data[i]['y'], vertex_data[i]['z']])
+        if 'red' in vertex_data[0]:
+            color[i, :] = np.array([vertex_data[i]['red'], vertex_data[i]['green'], vertex_data[i]['blue']])
+        if 'nx' in vertex_data[0]:
+            normals[i, :] = np.array([vertex_data[i]['nx'], vertex_data[i]['ny'], vertex_data[i]['nz']])
+
+    return vertex, color, normals
+
+
+def read_ply(full_name):
+
+    ply_format = None
+    n_vertices = None
+    n_faces = 0
+    properties = list()
+    prop_type = list()
+    properties_face = list()
+    properties_face_type = list()
+    header = list()
+    bytes_header = 0
+    bytes_ply = None
+
+    element_flag = 'vertex'
+
+    if sys.version_info.major == 2:
+        open_fun = open(full_name)
+    else:
+        open_fun = open(full_name, encoding="ISO-8859-1")
+
+    with open_fun as f:
+
+        content = f.readlines()
+
+        # Find header
+        i = 0
+
+        while content[i] != 'end_header\n':
+            header.append(content[i])
+            i += 1
+
+        # extract info
+        for i in range(0, len(header)):
+            buff = header[i].strip().split()
+            if buff[0] == 'format':
+                ply_format = buff[1]
+            if buff[0] == 'element':
+                if buff[1] == 'vertex':
+                    n_vertices = int(buff[2])
+                elif buff[1] == 'face':
+                    element_flag = 'face'
+                    n_faces = int(buff[2])
+                else:
+                    element_flag = 'dunno'
+            if buff[0] == 'property':
+                if element_flag == 'vertex':
+                    prop_type.append(buff[1])
+                    properties.append(buff[2])
+                elif element_flag == 'face':
+                    properties_face = buff[2:]
+
+        assert (ply_format is not None and n_vertices is not None)
+
+        vertex_data = [dict.fromkeys(properties) for k in range(n_vertices)]
+        bytes_ply = np.zeros((len(properties),), dtype=int)
+
+        face_data = list()
+
+        for i in range(len(header) + 1):
+            bytes_header += len(content[i])
+
+        prop_type_short = prop_type[:]
+        for i in range(len(prop_type)):
+            if prop_type[i] == 'float':
+                prop_type_short[i] = 'f'
+                bytes_ply[i] = 4
+            elif prop_type[i] == 'uchar':
+                prop_type_short[i] = 'B'
+                bytes_ply[i] = 1
+            elif prop_type[i] == 'int':
+                prop_type_short[i] = 'i'
+                bytes_ply[i] = 4
+            else:
+                raise ValueError('Unknown property type')
+
+        if ply_format == 'ascii':
+
+            for i in range(0, n_vertices):
+                buff = content[i + len(header) + 1].strip().split()
+                buff = [float(x) for x in buff]
+
+                for j in range(len(properties)):
+                    prop = properties[j]
+                    vertex_data[i][prop] = buff[j]
+
+            for i in range(n_faces):
+                buff = content[n_vertices+i + len(header) + 1].strip().split()
+                buff = [float(x) for x in buff]
+                face_data.append(np.array(buff[1:]))
+
+        elif ply_format == 'binary_little_endian':
+
+            ff = open(full_name, "rb")
+            header_ = ff.read(bytes_header)
+
+            for i in range(n_vertices):
+                for j in range(len(properties)):
+                    vertex_data[i][properties[j]] = struct.unpack(prop_type_short[j], ff.read(bytes_ply[j]))[0]
+
+            for i in range(n_faces):
+                n_face_vertex = struct.unpack('B', ff.read(1))[0]
+                t_ = np.zeros((n_face_vertex,))
+                for j in range(n_face_vertex):
+                    t_[j] = struct.unpack('i', ff.read(4))[0]
+                face_data.append(t_)
+
+            ff.close()
+
+        else:
+            raise ValueError('Unknown PLY format')
+
+        return vertex_data, face_data, properties, prop_type
 
 
 def make_field_circle(r=9.15, nn=1):
@@ -345,6 +480,31 @@ def _fun_distance_transform(params_, dist_map_, points3d):
     return np.sum(residual)
 
 
+def _fun_distance_transform2(params_, dist_map_, points3d):
+    theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = params_
+    h_, w_ = dist_map_.shape[0:2]
+
+    n_ = points3d.shape[0]
+
+    cx_, cy_ = float(dist_map_.shape[1])/2.0, float(dist_map_.shape[0])/2.0
+
+    R_ = Rz(theta_z_).dot(Ry(theta_y_)).dot(Rx(theta_x_))
+    A_ = np.eye(3, 3)
+    A_[0, 0], A_[1, 1], A_[0, 2], A_[1, 2] = fx_, fx_, cx_, cy_
+
+    T_ = np.array([[tx_], [ty_], [tz_]])
+
+    p2_ = A_.dot(R_.dot(points3d.T) + np.tile(T_, (1, n_)))
+    p2_ /= p2_[2, :]
+    p2_ = p2_.T[:, 0:2]
+    p2_ = np.round(p2_).astype(int)
+    _, valid_id_ = inside_frame(p2_, h_, w_)
+
+    residual = np.zeros((n_,)) + 0.0
+    residual[valid_id_] = dist_map_[p2_[valid_id_, 1], p2_[valid_id_, 0]]
+    return np.sum(residual)
+
+
 def calibrate_camera_dist_transf(A, R, T, dist_transf, points3d):
 
     theta_x, theta_y, theta_z = get_angle_from_rotation(R)
@@ -353,7 +513,7 @@ def calibrate_camera_dist_transf(A, R, T, dist_transf, points3d):
     params = np.hstack((theta_x, theta_y, theta_z, fx, T[0, 0], T[1, 0], T[2, 0]))
 
     res_ = minimize(_fun_distance_transform, params, args=(dist_transf, points3d),
-                    method='Powell', options={'disp': False, 'maxfev': 5})
+                    method='Powell', options={'disp': False})
     result = res_.x
 
     theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = result

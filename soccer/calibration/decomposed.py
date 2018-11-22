@@ -1,14 +1,10 @@
 import scannerpy
 import cv2
-import numpy as np
 import glob
 from os.path import join, basename
-from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
-from scannerpy.stdlib import pipelines
+from scannerpy import Database, Job, FrameType
 from skimage.morphology import medial_axis
 
-import subprocess
-import os.path
 import numpy as np
 import time
 import soccer.calibration.utils as utils
@@ -23,6 +19,11 @@ parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
 parser.add_argument('--nframes', type=int, default=5, help='Margin around the pose')
+parser.add_argument('--nworkers', type=int, default=5, help='Margin around the pose')
+parser.add_argument('--work_packet_size', type=int, default=4, help='Margin around the pose')
+parser.add_argument('--io_packet_size', type=int, default=8, help='Margin around the pose')
+
+
 opt, _ = parser.parse_known_args()
 
 
@@ -56,8 +57,9 @@ dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
 
 
 master = 'localhost:5001'
-workers = ['localhost:{:d}'.format(d) for d in range(5002, 5030)]
-db = Database(master=master, workers=workers)
+workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002+opt.nworkers)]
+# db = Database(master=master, workers=workers)
+db = Database()
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,
@@ -109,43 +111,50 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=1, work_packet_size=2, io_packet_size=4)
+[out_table] = db.run(output_op, [job], force=True, pipeline_instances_per_node=1,
+                     work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
 end = time.time()
 print('scanner distance transform: {0:.4f}'.format(end-start))
 
 
 # ======================================================================================================================
 results = out_table.column('frame').load()
-dist_transf_pickles = [res for res in results]
+# dist_transf_pickles = [res for res in results]
+dist_transf_list = [pickle.loads(res) for res in results]
 
 A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
 h, w = 1080, 1920
 
 start = time.time()
-for j, res in enumerate(tqdm(dist_transf_pickles)):
-    dist_transf = pickle.loads(res)
+for j, dist_transf in enumerate(tqdm(dist_transf_list)):
 
+    start = time.time()
     template, field_mask = utils.draw_field(A, R, T, h, w)
+    end = time.time()
+    print('draw: {0:.4f}'.format(end-start))
 
     II, JJ = (template > 0).nonzero()
     synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
-
     field3d = utils.plane_points_to_3d(synth_field2d, A, R, T)
 
+    start = time.time()
     A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
+    end = time.time()
+    print('optim: {0:.4f}\n\n'.format(end - start))
 
-    # frame = cv2.imread(imagename_list[i][j])[:, :, ::-1]
-    # rgb = frame.copy()
-    # canvas, mask = utils.draw_field(A, R, T, h, w)
-    # canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
-    # rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
-    #
-    # # result = np.dstack((template, template, template))*255
-    #
-    # out = rgb.astype(np.uint8)
-    #
-    # plt.imshow(out)
-    # plt.show()
+    if j % 50 == 0:
+        frame = cv2.imread(imagename_list[i][j])[:, :, ::-1]
+        rgb = frame.copy()
+        canvas, mask = utils.draw_field(A, R, T, h, w)
+        canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+        rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+
+        # result = np.dstack((template, template, template))*255
+
+        out = rgb.astype(np.uint8)
+
+        plt.imshow(out)
+        plt.show()
     #
     # if j == 10:
     #     break

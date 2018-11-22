@@ -23,8 +23,10 @@ cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename(image_files[
 h, w = 1080, 1920
 A, R, T = cam_data['A'],  cam_data['R'],  cam_data['T']
 
+soccer_field3d, _, _, _ = utils.read_ply('/home/krematas/Documents/field.ply')
+soccer_field3d, _, _ = utils.ply_to_numpy(soccer_field3d)
 
-for i in range(len(image_files)):
+for i in range(0, len(image_files), 10):
 
     print('{0} ========================================================='.format(i))
 
@@ -50,30 +52,33 @@ for i in range(len(image_files)):
     start = time.time()
     template, field_mask = utils.draw_field(A, R, T, h, w)
     end = time.time()
-    print('draw: {0:.4f}'.format(end-start))
+    print('draw: {0:.4f}'.format(end - start))
 
+    start = time.time()
     II, JJ = (template > 0).nonzero()
     synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
-
-    # cv2.imwrite(time.asctime()+'.jpg', template*255)
     field3d = utils.plane_points_to_3d(synth_field2d, A, R, T)
+    # _points2d = A@(R@soccer_field3d.T + np.tile(T, (1, soccer_field3d.shape[0])))
+    # _points2d = _points2d/np.tile(_points2d[2, :], (3, 1))
+    # _, valid = utils.inside_frame(_points2d[:2, :].T, h, w, margin=50)
+    # field3d = soccer_field3d[valid, :]
+    end = time.time()
+    print('lift to 3d: {0:.4f}'.format(end - start))
 
     start = time.time()
     A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
     end = time.time()
     print('optim: {0:.4f}\n\n'.format(end-start))
 
-    rgb = frame.copy()
-    canvas, mask = utils.draw_field(A, R, T, h, w)
-    canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
-    rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
-
-    # result = np.dstack((template, template, template))*255
-
-    out = rgb.astype(np.uint8)
-
     if i % 25 == 0:
+        rgb = frame.copy()
+        canvas, mask = utils.draw_field(A, R, T, h, w)
+        canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+        rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+        out = rgb.astype(np.uint8)
+
         plt.imshow(out)
         plt.show()
+        # break
 
 

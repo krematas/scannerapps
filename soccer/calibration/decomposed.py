@@ -4,6 +4,7 @@ import glob
 from os.path import join, basename
 from scannerpy import Database, Job, FrameType
 from skimage.morphology import medial_axis
+import os
 
 import numpy as np
 import time
@@ -19,6 +20,7 @@ parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
 parser.add_argument('--nframes', type=int, default=5, help='Margin around the pose')
+parser.add_argument('--framestep', type=int, default=10, help='Margin around the pose')
 parser.add_argument('--nworkers', type=int, default=5, help='Margin around the pose')
 parser.add_argument('--work_packet_size', type=int, default=4, help='Margin around the pose')
 parser.add_argument('--io_packet_size', type=int, default=8, help='Margin around the pose')
@@ -52,8 +54,12 @@ class DistanceTransformClass(scannerpy.Kernel):
 
 
 path_to_data = opt.path_to_data
-dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt'), join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland'), join(path_to_data, 'ahmed-musa-2nd-goal-nigeria-iceland')]
-dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
+
+goal_dirs = [item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item)) ]
+goal_dirs.sort()
+
+goal_id = 41
+dataset = join(path_to_data,goal_dirs[goal_id])
 
 
 master = 'localhost:5001'
@@ -67,28 +73,17 @@ params = {'bucket': opt.bucket,
           'endpoint': 'storage.googleapis.com',
           'region': 'US'}
 
+image_files = glob.glob(join(dataset, 'images', '*.jpg'))
+image_files.sort()
 
-video_list_scanner = []
-video_names = []
-imagename_list, maskname_list = [], []
-calibs = []
+mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
+mask_files.sort()
 
-for dataset in dataset_list:
-    video_list_scanner.append((basename(dataset), join(dataset, 'video.mp4')))
-    video_list_scanner.append((basename(dataset) + '_mask', join(dataset, 'mask.mp4')))
+cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename(image_files[0])[:-4]))).item()
 
-    video_names.append(basename(dataset))
 
-    image_files = glob.glob(join(dataset, 'images', '*.jpg'))
-    image_files.sort()
-    imagename_list.append(image_files)
-
-    mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
-    mask_files.sort()
-    maskname_list.append(mask_files)
-
-    cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename(image_files[0])[:-4]))).item()
-    calibs.append(cam_data)
+image_files = [image_files[i] for i in range(0, len(image_files), opt.framestep)]
+mask_files = [mask_files[i] for i in range(0, len(mask_files), opt.framestep)]
 
 
 encoded_image = db.sources.Files(**params)
@@ -98,14 +93,13 @@ encoded_mask = db.sources.Files(**params)
 frame_mask = db.ops.ImageDecoder(img=encoded_mask)
 
 
-i = 0
 dist_transform_class = db.ops.DistanceTransformClass(frame=frame_img, mask=frame_mask)
 output_op = db.sinks.FrameColumn(columns={'frame': dist_transform_class})
 
 job = Job(
     op_args={
-    encoded_image: {'paths': imagename_list[i], **params},
-    encoded_mask: {'paths': maskname_list[i], **params},
+    encoded_image: {'paths': image_files, **params},
+    encoded_mask: {'paths': mask_files, **params},
     output_op: 'example_resized55',
 })
 
@@ -122,16 +116,17 @@ results = out_table.column('frame').load()
 # dist_transf_pickles = [res for res in results]
 dist_transf_list = [pickle.loads(res) for res in results]
 
-A, R, T = calibs[i]['A'], calibs[i]['R'], calibs[i]['T']
+A, R, T = cam_data['A'], cam_data['R'], cam_data['T']
 h, w = 1080, 1920
 
+n_frames = len(image_files)
 start = time.time()
-for j, dist_transf in enumerate(tqdm(dist_transf_list)):
-
+for j in tqdm(range(n_frames)):
+    dist_transf = dist_transf_list[j]
     start = time.time()
     template, field_mask = utils.draw_field(A, R, T, h, w)
     end = time.time()
-    print('draw: {0:.4f}'.format(end-start))
+    # print('draw: {0:.4f}'.format(end-start))
 
     II, JJ = (template > 0).nonzero()
     synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
@@ -140,10 +135,10 @@ for j, dist_transf in enumerate(tqdm(dist_transf_list)):
     start = time.time()
     A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
     end = time.time()
-    print('optim: {0:.4f}\n\n'.format(end - start))
+    # print('optim: {0:.4f}\n\n'.format(end - start))
 
-    if j % 50 == 0:
-        frame = cv2.imread(imagename_list[i][j])[:, :, ::-1]
+    if j == n_frames-1:
+        frame = cv2.imread(image_files[j])[:, :, ::-1]
         rgb = frame.copy()
         canvas, mask = utils.draw_field(A, R, T, h, w)
         canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
@@ -153,12 +148,14 @@ for j, dist_transf in enumerate(tqdm(dist_transf_list)):
 
         out = rgb.astype(np.uint8)
 
+        end = time.time()
+        print('calibration: {0:.4f}'.format(end - start))
+
         plt.imshow(out)
         plt.show()
     #
     # if j == 10:
     #     break
 
-end = time.time()
-print('calibration: {0:.4f}'.format(end - start))
+
 

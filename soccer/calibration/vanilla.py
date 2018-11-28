@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 import glob
 from os.path import join, basename
-
+import os
 import soccer.calibration.utils as utils
 import matplotlib.pyplot as plt
 from skimage.morphology import medial_axis
@@ -11,7 +11,12 @@ import time
 path_to_data = '/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018'
 dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt'), join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland'), join(path_to_data, 'ahmed-musa-2nd-goal-nigeria-iceland')]
 
-dataset = join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt')
+goal_dirs = [ item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item)) ]
+goal_dirs.sort()
+
+goal_id = 41
+
+dataset = join(path_to_data, goal_dirs[goal_id])
 image_files = glob.glob(join(dataset, 'images', '*.jpg'))
 image_files.sort()
 
@@ -30,7 +35,7 @@ for i in range(0, len(image_files), 10):
 
     print('{0} ========================================================='.format(i))
 
-    frame = cv2.imread(image_files[i])
+    frame = cv2.imread(image_files[i])[:, :, ::-1]
     mask = cv2.imread(mask_files[i])
     edge_sfactor = 1.0
     edges = utils.robust_edge_detection(cv2.resize(frame[:, :, ::-1], None, fx=edge_sfactor, fy=edge_sfactor))
@@ -70,7 +75,7 @@ for i in range(0, len(image_files), 10):
     end = time.time()
     print('optim: {0:.4f}\n\n'.format(end-start))
 
-    if i % 25 == 0:
+    if i % 20 == 0 or i == len(image_files)-1:
         rgb = frame.copy()
         canvas, mask = utils.draw_field(A, R, T, h, w)
         canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)

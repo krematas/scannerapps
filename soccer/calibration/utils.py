@@ -456,6 +456,31 @@ def inside_frame(points2d, height, width, margin=0):
     return points2d, valid
 
 
+def _fun_distance_transform3(params_, dist_map_, points3d):
+    theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = params_
+    h_, w_ = dist_map_.shape[0:2]
+
+    n_ = points3d.shape[0]
+
+    cx_, cy_ = float(dist_map_.shape[1])/2.0, float(dist_map_.shape[0])/2.0
+
+    R_ = Rz(theta_z_).dot(Ry(theta_y_)).dot(Rx(theta_x_))
+    A_ = np.eye(3, 3)
+    A_[0, 0], A_[1, 1], A_[0, 2], A_[1, 2] = fx_, fx_, cx_, cy_
+
+    T_ = np.array([[tx_], [ty_], [tz_]])
+
+    p2_ = A_.dot(R_.dot(points3d.T) + np.tile(T_, (1, n_)))
+    x, y, z = p2_[0, :], p2_[1, :], p2_[2, :]
+    x = x/z
+    y = y/z
+
+    x = np.maximum(np.minimum(x, w_-1), 0).astype(int)
+    y = np.maximum(np.minimum(y, h_-1), 0).astype(int)
+
+    return np.sum(dist_map_[y, x])
+
+
 def _fun_distance_transform(params_, dist_map_, points3d):
     theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = params_
     h_, w_ = dist_map_.shape[0:2]
@@ -512,8 +537,8 @@ def calibrate_camera_dist_transf(A, R, T, dist_transf, points3d):
 
     params = np.hstack((theta_x, theta_y, theta_z, fx, T[0, 0], T[1, 0], T[2, 0]))
 
-    res_ = minimize(_fun_distance_transform, params, args=(dist_transf, points3d),
-                    method='Powell', options={'disp': False})
+    res_ = minimize(_fun_distance_transform3, params, args=(dist_transf, points3d),
+                    method='Nelder-Mead', options={'disp': False, 'maxiter': 50, 'maxfev': 100})
     result = res_.x
 
     theta_x_, theta_y_, theta_z_, fx_, tx_, ty_, tz_ = result

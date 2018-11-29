@@ -231,7 +231,6 @@ def robust_edge_detection(img):
     edges = (drawn_img[:, :, 2] > 1).astype(np.float32)
 
     kernel = np.ones((7, 7), np.uint8)
-
     edges = cv2.morphologyEx(edges, cv2.MORPH_CLOSE, kernel)
     kernel = np.ones((3, 3), np.uint8)
     edges = cv2.morphologyEx(edges, cv2.MORPH_OPEN, kernel)

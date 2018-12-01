@@ -59,7 +59,7 @@ class DistanceTransformKernel : public scanner::Kernel, public scanner::VideoKer
     check_frame(scanner::CPU_DEVICE, mask_col);
 
     auto& resized_frame_col = output_columns[0];
-    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::F32);
+    scanner::FrameInfo output_frame_info(height_, width_, 1, scanner::FrameType::F32);
 
     const scanner::Frame* image_frame = frame_col.as_const_frame();
     cv::Mat image = scanner::frame_to_mat(image_frame);
@@ -100,7 +100,7 @@ class DistanceTransformKernel : public scanner::Kernel, public scanner::VideoKer
     cv::ximgproc::thinning(channels[2] ,  channels[2]);
 
     cv::Mat dist_transf;
-    cv::distanceTransform(channels[2], dist_transf, CV_DIST_L2, 0);
+
 
 //    cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
 //    cv::imshow( "Display window", dist_transf );                   // Show our image inside it.
@@ -111,7 +111,8 @@ class DistanceTransformKernel : public scanner::Kernel, public scanner::VideoKer
     scanner::Frame* resized_frame = scanner::new_frame(scanner::CPU_DEVICE, output_frame_info);
     cv::Mat output = scanner::frame_to_mat(resized_frame);
 
-    cv::resize(dist_transf, output, cv::Size(width_, height_));
+    cv::distanceTransform(255-channels[2], output, CV_DIST_L2, 0);
+//    cv::resize(dist_transf, output, cv::Size(width_, height_));
 
     scanner::insert_frame(resized_frame_col, resized_frame);
   }

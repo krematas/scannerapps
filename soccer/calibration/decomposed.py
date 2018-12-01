@@ -58,7 +58,7 @@ path_to_data = opt.path_to_data
 goal_dirs = [item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item)) ]
 goal_dirs.sort()
 
-goal_id = 4
+goal_id = 14
 dataset = join(path_to_data,goal_dirs[goal_id])
 print('Processing dataset: {0}'.format(dataset))
 
@@ -121,6 +121,9 @@ print('scanner distance transform: {0:.4f}'.format(end-start))
 results = out_table.column('frame').load()
 # dist_transf_pickles = [res for res in results]
 dist_transf_list = [pickle.loads(res) for res in results]
+
+plt.imshow(dist_transf_list[0])
+plt.show()
 
 A, R, T = cam_data['A'], cam_data['R'], cam_data['T']
 h, w = 1080, 1920

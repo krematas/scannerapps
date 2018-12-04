@@ -111,7 +111,7 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=32, tasks_in_queue_per_pu=4)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
 end = time.time()
 print('scanner pose drawing: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
 
@@ -139,7 +139,7 @@ for i, res in tqdm(enumerate(results)):
         _mask = buff[sel]['mask']
 
         framename = basename(image_files[i])[:-4]
-        cv2.imwrite(join(dataset, 'players', 'images', '{0}_{1}.jpg'.format(framename, sel)), _img)
+        cv2.imwrite(join(dataset, 'players', 'images', '{0}_{1}.jpg'.format(framename, sel)), _img[:, :, ::-1])
         cv2.imwrite(join(dataset, 'players', 'masks', '{0}_{1}.png'.format(framename, sel)), _mask)
         cv2.imwrite(join(dataset, 'players', 'poseimgs', '{0}_{1}.png'.format(framename, sel)), _pose_img)
 end = time.time()

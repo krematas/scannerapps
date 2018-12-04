@@ -87,7 +87,7 @@ else:
         os.path.join(cwd, 'segment_op/build/libsegment_op.so'),
         os.path.join(cwd, 'segment_op/build/segment_pb2.py'))
 
-model_path = 'model.yml.gz'
+model_path = '/home/krematas/code/scannerapps/model.yml.gz'
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,
@@ -121,4 +121,4 @@ start = time.time()
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
-# out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
+out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))

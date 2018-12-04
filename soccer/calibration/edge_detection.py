@@ -151,8 +151,40 @@ for j in tqdm(range(1, n_frames), ncols=50):
         plt.show()
 
 
-# for res in results:
-#     print(res.shape)
-#     plt.imshow(res[:, :, 0])
-#     plt.show()
-#     # break
+for j in range(len(indeces)-1):
+    start, end = indeces[j], indeces[j+1]
+    f_s, f_e = CAMERAS_A[start][0, 0], CAMERAS_A[end][0, 0]
+    T_s, T_e = CAMERAS_T[start], CAMERAS_T[end]
+    angles_s, angles_t = utils.get_angle_from_rotation(CAMERAS_R[start]), utils.get_angle_from_rotation(CAMERAS_R[end])
+
+    interm_f = np.linspace(f_s, f_e, end-start)[1:]
+    interm_R = np.zeros((3, end - start - 1))
+    interm_T = np.zeros((3, end - start - 1))
+
+    for k in range(3):
+        interm_R[k, :] = np.linspace(angles_s[k], angles_t[k], end - start)[1:]
+        interm_T[k, :] = np.linspace(T_s[k, 0], T_e[k, 0], end - start)[1:]
+
+    for k in range(start+1, end):
+        if CAMERAS_A[k] is not None:
+            print('hahahahahahaha')
+        else:
+            A = np.eye(3, 3)
+            A[0, 0] = A[1, 1] = interm_f[k-(start+1)]
+            A[0, 2] = w / 2.0
+            A[1, 2] = h / 2.0
+            CAMERAS_A[k] = A
+
+            R = utils.Rz(interm_R[2, k-(start+1)])@utils.Ry(interm_R[1, k-(start+1)])@utils.Rx(interm_R[0, k-(start+1)])
+            CAMERAS_R[k] = R
+
+            T = np.zeros((3, 1))
+            T[0, 0] = interm_T[0, k - (start + 1)]
+            T[1, 0] = interm_T[1, k - (start + 1)]
+            T[2, 0] = interm_T[2, k - (start + 1)]
+            CAMERAS_T[k] = T
+
+for i in range(1, len(image_files_all)):
+    fname = basename(image_files_all[i])[:-4]
+    np.save(join(dataset, 'calib', fname+'.npy'), {'A': CAMERAS_A[i], 'R': CAMERAS_R[i], 'T': CAMERAS_T[i]})
+print('Calibration files saved for : {0}'.format(dataset))

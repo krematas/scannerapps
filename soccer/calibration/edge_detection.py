@@ -21,7 +21,7 @@ parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
 parser.add_argument('--video', type=int, default=5, help='Margin around the pose')
 parser.add_argument('--framestep', type=int, default=10, help='Margin around the pose')
-parser.add_argument('--nworkers', type=int, default=5, help='Margin around the pose')
+parser.add_argument('--nworkers', type=int, default=0, help='Margin around the pose')
 parser.add_argument('--work_packet_size', type=int, default=2, help='Margin around the pose')
 parser.add_argument('--io_packet_size', type=int, default=4, help='Margin around the pose')
 
@@ -42,8 +42,11 @@ h, w = 1080, 1920
 
 master = 'localhost:5001'
 workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002+opt.nworkers)]
-# db = Database(master=master, workers=workers)
-db = Database()
+
+if opt.nworkers > 0:
+    db = Database(master=master, workers=workers)
+else:
+    db = Database()
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,

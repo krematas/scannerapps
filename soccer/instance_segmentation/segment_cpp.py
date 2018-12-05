@@ -114,8 +114,7 @@ job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
         encoded_mask: {'paths': mask_files, **params},
-
-        output_op: 'example_resized',
+        output_op: 'example_resized2',
     })
 
 start = time.time()

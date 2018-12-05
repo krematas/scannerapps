@@ -1,16 +1,9 @@
-import scannerpy
-from scannerpy import Database, Job, FrameType
 from soccer.main.kernels import *
 import cv2
 import glob
 from os.path import join, basename
-from skimage.morphology import medial_axis
 import os
-
-import numpy as np
 import time
-import soccer.calibration.utils as utils
-import matplotlib.pyplot as plt
 import pickle
 from tqdm import tqdm
 import argparse

@@ -3,3 +3,5 @@ scipy
 matplotlib
 torch
 torchvision
+import cython
+

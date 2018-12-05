@@ -1,16 +1,12 @@
-import scannerpy
-from scannerpy import Database, Job, FrameType
-import cv2
+from scannerpy import Database, Job
 import glob
 from os.path import join, basename
-from skimage.morphology import medial_axis
 import os
 
 import numpy as np
 import time
 import soccer.calibration.utils as utils
 import matplotlib.pyplot as plt
-import pickle
 from tqdm import tqdm
 import argparse
 
@@ -136,22 +132,22 @@ for j in tqdm(range(1, n_frames), ncols=50):
     CAMERAS_T[indeces[j]] = T
     # print('optim: {0:.4f}\n\n'.format(end - start))
 
-    if j == n_frames-1:
-        frame = cv2.imread(image_files[j])[:, :, ::-1]
-        rgb = frame.copy()
-        canvas, mask = utils.draw_field(A, R, T, h, w)
-        canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
-        rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
-
-        # result = np.dstack((template, template, template))*255
-
-        out = rgb.astype(np.uint8)
-
-        end = time.time()
-        print('calibration: {0:.4f}'.format(end - start))
-
-        plt.imshow(out)
-        plt.show()
+    # if j == n_frames-1:
+    #     frame = cv2.imread(image_files[j])[:, :, ::-1]
+    #     rgb = frame.copy()
+    #     canvas, mask = utils.draw_field(A, R, T, h, w)
+    #     canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+    #     rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+    #
+    #     # result = np.dstack((template, template, template))*255
+    #
+    #     out = rgb.astype(np.uint8)
+    #
+    #     end = time.time()
+    #     print('calibration: {0:.4f}'.format(end - start))
+    #
+    #     plt.imshow(out)
+    #     plt.show()
 
 
 for j in range(len(indeces)-1):

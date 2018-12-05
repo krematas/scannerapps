@@ -114,18 +114,13 @@ n_frames = len(image_files)
 start = time.time()
 for j in tqdm(range(1, n_frames), ncols=50):
     dist_transf = dist_transf_list[j]
-    start = time.time()
     template, field_mask = utils.draw_field(A, R, T, h, w)
-    end = time.time()
-    # print('draw: {0:.4f}'.format(end-start))
 
     II, JJ = (template > 0).nonzero()
     synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
     field3d = utils.plane_points_to_3d(synth_field2d, A, R, T)
 
-    start = time.time()
     A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
-    end = time.time()
 
     CAMERAS_A[indeces[j]] = A
     CAMERAS_R[indeces[j]] = R

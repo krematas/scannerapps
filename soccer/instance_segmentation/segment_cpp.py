@@ -119,7 +119,7 @@ job = Job(
     })
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
+[out_table] = db.run(output_op, [job], work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))

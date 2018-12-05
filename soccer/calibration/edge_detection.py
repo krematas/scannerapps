@@ -149,6 +149,9 @@ for j in tqdm(range(1, n_frames), ncols=50):
     #     plt.imshow(out)
     #     plt.show()
 
+end = time.time()
+print('calibration: {0:.4f}'.format(end - start))
+
 
 for j in range(len(indeces)-1):
     start, end = indeces[j], indeces[j+1]

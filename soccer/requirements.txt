@@ -3,5 +3,5 @@ scipy
 matplotlib
 torch
 torchvision
-import cython
-
+shapely
+opencv-contrib-python

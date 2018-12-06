@@ -18,8 +18,10 @@ parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
-parser.add_argument('--work_packet_size', type=int, default=2, help='Margin around the pose')
-parser.add_argument('--io_packet_size', type=int, default=4, help='Margin around the pose')
+parser.add_argument('--work_packet_size', type=int, default=2)
+parser.add_argument('--io_packet_size', type=int, default=4)
+parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
+
 opt, _ = parser.parse_known_args()
 
 
@@ -121,7 +123,8 @@ job = Job(
     })
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
+                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))

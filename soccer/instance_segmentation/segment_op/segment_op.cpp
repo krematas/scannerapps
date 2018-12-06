@@ -3,6 +3,7 @@
 #include "scanner/api/op.h"       // for REGISTER_OP
 #include "scanner/util/memory.h"  // for device-independent memory management
 #include "scanner/util/opencv.h"  // for using OpenCV
+#include "scanner/util/serialize.h"
 
 #include <opencv2/opencv.hpp>
 #include <opencv2/ximgproc.hpp>
@@ -15,6 +16,7 @@
 typedef float var_t;
 typedef Eigen::SparseMatrix<var_t> SpMat;
 typedef Eigen::Triplet<var_t> T;
+typedef char byte;
 
 void getPixelNeighbors(int height, int width, std::vector<std::vector<int>>& neighborId){
 
@@ -175,12 +177,9 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     // The protobuf arguments must be decoded from the input string.
     MySegmentArgs args;
     args.ParseFromArray(config.args.data(), config.args.size());
-    width_ = args.w();
-    height_ = args.h();
     sigma1 = args.sigma1();
     sigma2 = args.sigma2();
-    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(
-        args.model_path());
+    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
   }
 
   // Execute is the core computation of the kernel. It maps a batch of rows
@@ -197,8 +196,8 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     check_frame(scanner::CPU_DEVICE, frame_col);
     check_frame(scanner::CPU_DEVICE, mask_col);
 
-    auto& resized_frame_col = output_columns[0];
-    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
+//    auto& resized_frame_col = output_columns[0];
+//    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
 
     const scanner::Frame* frame = frame_col.as_const_frame();
     cv::Mat image = scanner::frame_to_mat(frame);
@@ -248,24 +247,38 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     }
 
 
-    // new_mask.convertTo(new_mask, CV_8UC3, 255.0);
+     new_mask.convertTo(new_mask, CV_8U, 255.0);
     // cv::Mat output_img;
     // edges.convertTo(output_img, cv::DataType<uint8>::type);
-    cv::cvtColor(new_mask, new_mask, cv::COLOR_GRAY2BGR);
+//    cv::cvtColor(new_mask, new_mask, cv::COLOR_GRAY2BGR);
 
     // Allocate a frame for the resized output frame
-    scanner::Frame* resized_frame = scanner::new_frame(scanner::CPU_DEVICE, output_frame_info);
-    cv::Mat output = scanner::frame_to_mat(resized_frame);
+//    scanner::Frame* resized_frame = scanner::new_frame(scanner::CPU_DEVICE, output_frame_info);
+//    cv::Mat output = scanner::frame_to_mat(resized_frame);
 
-    cv::resize(new_mask, output, cv::Size(width_, height_));
+//    cv::resize(new_mask, output, cv::Size(width_, height_));
 
-    scanner::insert_frame(resized_frame_col, resized_frame);
+//    scanner::insert_frame(resized_frame_col, resized_frame);
+
+    MyImage proto_image;
+    int size = new_mask.total() * new_mask.elemSize();
+    byte * bytes = new byte[size];  // you will have to delete[] that later
+    std::memcpy(bytes, new_mask.data, size * sizeof(byte));
+    proto_image.set_image_data(bytes, size * sizeof(byte));
+    proto_image.set_h(height);
+    proto_image.set_w(width);
+    delete []bytes;
+
+
+    size_t size2 = proto_image.ByteSize();
+    scanner::u8* buffer = scanner::new_buffer(scanner::CPU_DEVICE, size2);
+    proto_image.SerializeToArray(buffer, size2);
+
+    scanner::insert_element(output_columns[0], buffer, size2);
   }
 
  private:
   cv::Ptr<cv::ximgproc::StructuredEdgeDetection> pDollar_;
-  int width_;
-  int height_;
   float sigma1;
   float sigma2;
 };
@@ -273,7 +286,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 // These functions run statically when the shared library is loaded to tell the
 // Scanner runtime about your custom op.
 
-REGISTER_OP(MySegment).frame_input("frame").frame_input("mask").frame_output("frame").protobuf_name("MySegmentArgs");
+REGISTER_OP(MySegment).frame_input("frame").frame_input("mask").output("frame").protobuf_name("MySegmentArgs");
 
 REGISTER_KERNEL(MySegment, MySegmentKernel)
     .device(scanner::DeviceType::CPU)

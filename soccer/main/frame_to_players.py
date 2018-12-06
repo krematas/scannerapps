@@ -118,7 +118,7 @@ def mkdir(path_to_dir):
 
 mkdir(join(dataset, 'players'))
 mkdir(join(dataset, 'players', 'images'))
-mkdir(join(dataset, 'players', 'masks'))
+mkdir(join(dataset, 'players', 'cnn_masks'))
 mkdir(join(dataset, 'players', 'poseimgs'))
 
 start = time.time()
@@ -133,7 +133,7 @@ for i, res in tqdm(enumerate(results)):
 
         framename = basename(image_files[i])[:-4]
         cv2.imwrite(join(dataset, 'players', 'images', '{0}_{1}.jpg'.format(framename, sel)), _img[:, :, ::-1])
-        cv2.imwrite(join(dataset, 'players', 'masks', '{0}_{1}.png'.format(framename, sel)), _mask)
+        cv2.imwrite(join(dataset, 'players', 'cnn_masks', '{0}_{1}.png'.format(framename, sel)), _mask)
         cv2.imwrite(join(dataset, 'players', 'poseimgs', '{0}_{1}.png'.format(framename, sel)), _pose_img)
 end = time.time()
 print('Writing player files: {0:.4f} for {1} frames'.format(end-start, len(image_files)))

@@ -42,6 +42,8 @@ else:
 image_files.sort()
 mask_files.sort()
 
+# image_files = image_files[:10]
+# mask_files = mask_files[:10]
 
 if opt.cloud:
     print('Finding master IP...')
@@ -69,7 +71,8 @@ else:
     db = Database()
 
 
-cwd = os.path.dirname(os.path.abspath(__file__))
+# cwd = os.path.dirname(os.path.abspath(__file__))
+cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/'
 if not os.path.isfile(os.path.join(cwd, 'segment_op/build/libsegment_op.so')):
     print(
         'You need to build the custom op first: \n'
@@ -105,7 +108,6 @@ mask_frame = db.ops.ImageDecoder(img=encoded_mask)
 
 my_segment_imageset_class = db.ops.MySegment(
     frame=frame, mask=mask_frame,
-    w=128, h=128,
     sigma1=1.0, sigma2=0.01,
     model_path=model_path)
 output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
@@ -114,12 +116,35 @@ job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
         encoded_mask: {'paths': mask_files, **params},
-        output_op: 'example_resized2',
+
+        output_op: 'example_resized',
     })
 
 start = time.time()
-[out_table] = db.run(output_op, [job], work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
-out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
+# out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
+# out_table.profiler().write_trace('hist.trace')
+
+
+results = out_table.column('frame').load()
+
+# import soccer.instance_segmentation.segment_op.build.segment_pb2 as segment_pb2
+# import matplotlib.pyplot as plt
+#
+#
+# for i, res in enumerate(results):
+#     my_image = segment_pb2.MyImage()
+#     my_image.ParseFromString(res)
+#     nparr = np.fromstring(my_image.image_data, np.uint8)
+#     instance_mask = nparr.reshape((my_image.h, my_image.w))
+#     plt.imshow(instance_mask)
+#     plt.show()
+    # print(i, my_image.w)
+    # break
+
+
+# my_image = segment_pb2.MyImage()
+

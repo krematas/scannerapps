@@ -179,7 +179,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     args.ParseFromArray(config.args.data(), config.args.size());
     sigma1 = args.sigma1();
     sigma2 = args.sigma2();
-    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
+//    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
   }
 
   // Execute is the core computation of the kernel. It maps a batch of rows
@@ -196,9 +196,6 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     check_frame(scanner::CPU_DEVICE, frame_col);
     check_frame(scanner::CPU_DEVICE, mask_col);
 
-//    auto& resized_frame_col = output_columns[0];
-//    scanner::FrameInfo output_frame_info(height_, width_, 3, scanner::FrameType::U8);
-
     const scanner::Frame* frame = frame_col.as_const_frame();
     cv::Mat image = scanner::frame_to_mat(frame);
 
@@ -207,22 +204,32 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 
     image.convertTo(image, cv::DataType<var_t>::type, 1.0/255.0);
     var_t *imgData = (var_t*)(image.data);
-//    std::cout<<image.channels()<<std::endl;
-
 
     poseImage.convertTo(poseImage, cv::DataType<var_t>::type);
     var_t *poseData = (var_t*)(poseImage.data);
-//    std::cout<<poseImage.channels()<<std::endl;
-    //
+
     cv::Mat img2;
     image.copyTo(img2);
     img2.convertTo(img2, cv::DataType<var_t>::type);
     cv::Mat edges(img2.size(), img2.type());
 
-    pDollar_->detectEdges(img2, edges);
-//    std::cout<<edges.channels()<<std::endl;
+//    pDollar_->detectEdges(img2, edges);
 
-//    std::cout<<" -------------------------- "<<std::endl<<std::endl;
+    int scale = 1;
+    int delta = 0;
+    int ddepth = CV_16S;
+    cv::Mat src_gray;
+    cv::GaussianBlur( img2, img2, cv::Size(3,3), 0, 0, cv::BORDER_DEFAULT );
+    cv::cvtColor( img2, src_gray, cv::COLOR_BGR2GRAY );
+    cv::Mat grad_x, grad_y;
+    cv::Mat abs_grad_x, abs_grad_y;
+    cv::Sobel( src_gray, grad_x, ddepth, 1, 0, 3, scale, delta, cv::BORDER_DEFAULT );
+    cv::Sobel( src_gray, grad_y, ddepth, 0, 1, 3, scale, delta, cv::BORDER_DEFAULT );
+    cv::convertScaleAbs( grad_x, abs_grad_x );
+    cv::convertScaleAbs( grad_y, abs_grad_y );
+    cv::addWeighted( abs_grad_x, 0.5, abs_grad_y, 0.5, 0, edges );
+
+
     int height = image.rows;
     int width = image.cols;
 
@@ -230,15 +237,9 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
 
     var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
 
-    // cv::Mat new_mask(height, width, cv::DataType<var_t>::type, segm_output);
-
-    //copy vector to mat
-    // std::cout<<edges.size()<<edges.type()<<std::endl;
-
     cv::Mat new_mask(height, width, CV_8U);
     for(int i=0; i<height; i++) {
         for (int j = 0; j < width; j++) {
-          // std::cout<<segm_output[i*width+j]<<std::endl;
             if(segm_output[i*width+j] > 1.5)
                 new_mask.at<uchar>(i,j) = 255;
             else
@@ -247,18 +248,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     }
 
 
-     new_mask.convertTo(new_mask, CV_8U, 255.0);
-    // cv::Mat output_img;
-    // edges.convertTo(output_img, cv::DataType<uint8>::type);
-//    cv::cvtColor(new_mask, new_mask, cv::COLOR_GRAY2BGR);
-
-    // Allocate a frame for the resized output frame
-//    scanner::Frame* resized_frame = scanner::new_frame(scanner::CPU_DEVICE, output_frame_info);
-//    cv::Mat output = scanner::frame_to_mat(resized_frame);
-
-//    cv::resize(new_mask, output, cv::Size(width_, height_));
-
-//    scanner::insert_frame(resized_frame_col, resized_frame);
+    new_mask.convertTo(new_mask, CV_8U, 255.0);
 
     MyImage proto_image;
     int size = new_mask.total() * new_mask.elemSize();

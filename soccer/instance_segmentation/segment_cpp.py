@@ -46,8 +46,8 @@ else:
 image_files.sort()
 mask_files.sort()
 
-image_files = image_files[:10]
-mask_files = mask_files[:10]
+# image_files = image_files[:10]
+# mask_files = mask_files[:10]
 
 if opt.cloud:
     print('Finding master IP...')

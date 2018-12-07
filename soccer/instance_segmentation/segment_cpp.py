@@ -72,7 +72,7 @@ if opt.cloud:
     db = Database(master=master, start_cluster=False, config_path='./config.toml',
                   grpc_timeout=60)
 else:
-    db = Database()
+    db = Database(pipeline_instances_per_node=1)
 
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
@@ -126,7 +126,7 @@ job = Job(
 
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
-                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
+                     io_packet_size=opt.io_packet_size)
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))

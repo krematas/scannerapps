@@ -75,7 +75,7 @@ if opt.cloud:
 else:
     if opt.nworkers > 0:
         master = 'localhost:5001'
-        db = Database(master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(96)])
+        db = Database(master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(opt.nworkers)])
     else:
         db = Database()
 

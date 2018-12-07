@@ -24,6 +24,8 @@ parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
 
 opt, _ = parser.parse_known_args()
 
+if opt.pipeline_instances_per_node < 0:
+    opt.pipeline_instances_per_node = None
 
 dataset = opt.path_to_data
 
@@ -44,8 +46,8 @@ else:
 image_files.sort()
 mask_files.sort()
 
-# image_files = image_files[:10]
-# mask_files = mask_files[:10]
+image_files = image_files[:10]
+mask_files = mask_files[:10]
 
 if opt.cloud:
     print('Finding master IP...')

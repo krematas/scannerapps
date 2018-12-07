@@ -179,8 +179,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     args.ParseFromArray(config.args.data(), config.args.size());
     sigma1 = args.sigma1();
     sigma2 = args.sigma2();
-    modelName = args.model_path();
-
+    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
   }
 
   // Execute is the core computation of the kernel. It maps a batch of rows
@@ -214,7 +213,6 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     img2.convertTo(img2, cv::DataType<var_t>::type);
     cv::Mat edges(img2.size(), img2.type());
 
-    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(modelName);
     pDollar_->detectEdges(img2, edges);
 
     int height = image.rows;
@@ -258,7 +256,6 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
   cv::Ptr<cv::ximgproc::StructuredEdgeDetection> pDollar_;
   float sigma1;
   float sigma2;
-  std::string modelName;
 };
 
 // These functions run statically when the shared library is loaded to tell the

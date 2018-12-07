@@ -38,16 +38,16 @@ if opt.cloud:
         stripped_paths = [p[prefix_len:] for p in paths]
         return stripped_paths
     image_files = get_paths(join(dataset, 'players', 'images', '*.jpg'))
-    mask_files = get_paths(join(dataset, 'players', 'poseimgs', '*.png'))
+    poseimg_files = get_paths(join(dataset, 'players', 'poseimgs', '*.png'))
 else:
     image_files = glob.glob(join(dataset, 'players', 'images', '*.jpg'))
-    mask_files = glob.glob(join(dataset, 'players', 'poseimgs', '*.png'))
+    poseimg_files = glob.glob(join(dataset, 'players', 'poseimgs', '*.png'))
 
 image_files.sort()
-mask_files.sort()
+poseimg_files.sort()
 
 # image_files = image_files[:10]
-# mask_files = mask_files[:10]
+# poseimg_files = poseimg_files[:10]
 
 if opt.cloud:
     print('Finding master IP...')
@@ -119,7 +119,7 @@ output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
 job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
-        encoded_mask: {'paths': mask_files, **params},
+        encoded_mask: {'paths': poseimg_files, **params},
 
         output_op: 'example_resized',
     })
@@ -131,7 +131,7 @@ end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
 # out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
-# out_table.profiler().write_trace('hist.trace')
+out_table.profiler().write_trace(join(dataset, 'hist.trace'))
 
 
 results = out_table.column('frame').load()

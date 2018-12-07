@@ -75,7 +75,7 @@ if opt.cloud:
 else:
     if opt.nworkers > 0:
         master = 'localhost:5001'
-        db = Database(pipeline_instances_per_node=1, master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(96)])
+        db = Database(master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(96)])
     else:
         db = Database()
 
@@ -131,7 +131,7 @@ job = Job(
 
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
-                     io_packet_size=opt.io_packet_size)
+                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
 end = time.time()
 
 print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))

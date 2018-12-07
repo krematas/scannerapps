@@ -18,6 +18,7 @@ parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
+parser.add_argument('--nworkers', type=int, default=0, help='Margin around the pose')
 parser.add_argument('--work_packet_size', type=int, default=2)
 parser.add_argument('--io_packet_size', type=int, default=4)
 parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
@@ -72,7 +73,11 @@ if opt.cloud:
     db = Database(master=master, start_cluster=False, config_path='./config.toml',
                   grpc_timeout=60)
 else:
-    db = Database(pipeline_instances_per_node=1)
+    if opt.nworkers > 0:
+        master = 'localhost:5001'
+        db = Database(pipeline_instances_per_node=1, master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(96)])
+    else:
+        db = Database()
 
 
 # cwd = os.path.dirname(os.path.abspath(__file__))

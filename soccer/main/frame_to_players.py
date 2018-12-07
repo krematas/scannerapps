@@ -33,11 +33,9 @@ print('Processing dataset: {0}'.format(dataset))
 
 h, w = 1080, 1920
 
-
-master = 'localhost:5001'
-workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002+opt.nworkers)]
-
 if opt.nworkers > 0:
+    master = 'localhost:5001'
+    workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002 + opt.nworkers)]
     db = Database(master=master, workers=workers)
 else:
     db = Database()

@@ -47,8 +47,8 @@ else:
 image_files.sort()
 poseimg_files.sort()
 
-# image_files = image_files[:10]
-# poseimg_files = poseimg_files[:10]
+# image_files = image_files[:8]
+# poseimg_files = poseimg_files[:8]
 
 if opt.cloud:
     print('Finding master IP...')
@@ -133,8 +133,8 @@ start = time.time()
 [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
                      io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
 end = time.time()
+print('Total time for instance segmentation in scanner: {0:.3f} sec for {1} images'.format(end-start, len(image_files)))
 
-print('Total time for instance segmentation in scanner: {0:.3f} sec'.format(end-start))
 # out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
 out_table.profiler().write_trace(join(dataset, 'hist.trace'))
 print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))

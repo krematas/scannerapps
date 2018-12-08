@@ -5,13 +5,9 @@
 #include "scanner/util/opencv.h"  // for using OpenCV
 #include "scanner/util/serialize.h"
 
-#include <opencv2/opencv.hpp>
 #include <opencv2/ximgproc.hpp>
-#include "opencv2/highgui.hpp"
-#include "opencv2/core/utility.hpp"
 
 #include <iostream>               // for std::cout
-#include <ctime>
 
 #include <Eigen/Sparse>
 typedef float var_t;
@@ -190,7 +186,6 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
   void execute(const scanner::Elements& input_columns,
                scanner::Elements& output_columns) override {
 
-//               clock_t begin = clock();
     auto& frame_col = input_columns[0];
     auto& mask_col = input_columns[1];
 
@@ -236,7 +231,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     }
 
 
-    new_mask.convertTo(new_mask, CV_8U, 255.0);
+//    new_mask.convertTo(new_mask, CV_8U, 255.0);
 
     MyImage proto_image;
     int size = new_mask.total() * new_mask.elemSize();
@@ -253,9 +248,6 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     proto_image.SerializeToArray(buffer, size2);
 
     scanner::insert_element(output_columns[0], buffer, size2);
-    clock_t end = clock();
-//    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-//    std::cout<<"Kernel time: "<<elapsed_secs<<std::endl;
   }
 
  private:

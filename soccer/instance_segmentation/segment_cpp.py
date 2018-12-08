@@ -135,7 +135,6 @@ start = time.time()
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec for {1} images'.format(end-start, len(image_files)))
 
-# out_table.column('frame').save_mp4(join(dataset, 'players', 'instance_segm.mp4'))
 out_table.profiler().write_trace(join(dataset, 'hist.trace'))
 print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 

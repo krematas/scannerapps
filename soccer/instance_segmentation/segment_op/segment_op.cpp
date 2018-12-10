@@ -15,6 +15,9 @@ typedef Eigen::SparseMatrix<var_t> SpMat;
 typedef Eigen::Triplet<var_t> T;
 typedef char byte;
 
+#include <ctime>
+
+
 void getPixelNeighbors(int height, int width, std::vector<std::vector<int>>& neighborId){
 
     for(int i=0; i<height; i++){
@@ -211,14 +214,23 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     img2.convertTo(img2, cv::DataType<var_t>::type);
     cv::Mat edges(img2.size(), img2.type());
 
+    clock_t begin = clock();
     pDollar_->detectEdges(img2, edges);
+    clock_t end = clock();
+    double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    cout<<"detect edges: "<<elapsed_secs<<std::endl;
 
     int height = image.rows;
     int width = image.cols;
 
     var_t *edgesData = (var_t*)(edges.data);
 
+    begin = clock();
     var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
+    end = clock();
+    elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
+    cout<<"segmentFromPoses : "<<elapsed_secs<<std::endl;
+
 
     cv::Mat new_mask(height, width, CV_8U);
     for(int i=0; i<height; i++) {

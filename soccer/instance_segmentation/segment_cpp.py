@@ -19,6 +19,7 @@ parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
 parser.add_argument('--nworkers', type=int, default=0, help='Margin around the pose')
+parser.add_argument('--total_files', type=int, default=-1)
 parser.add_argument('--work_packet_size', type=int, default=2)
 parser.add_argument('--io_packet_size', type=int, default=4)
 parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
@@ -47,8 +48,8 @@ else:
 image_files.sort()
 poseimg_files.sort()
 
-# image_files = image_files[:8]
-# poseimg_files = poseimg_files[:8]
+image_files = image_files[:opt.total_files]
+poseimg_files = poseimg_files[:opt.total_files]
 
 if opt.cloud:
     print('Finding master IP...')

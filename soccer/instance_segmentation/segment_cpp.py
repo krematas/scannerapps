@@ -132,7 +132,8 @@ job = Job(
 
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
-                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
+                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
+                     tasks_in_queue_per_pu=1)
 end = time.time()
 print('Total time for instance segmentation in scanner: {0:.3f} sec for {1} images'.format(end-start, len(image_files)))
 

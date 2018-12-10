@@ -130,17 +130,17 @@ print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
 results = out_table.column('frame').load()
 
-import soccer.instance_segmentation.edge_detection.edges_op.build.edges_pb2 as edges_pb2
-import matplotlib.pyplot as plt
-
-
-for i, res in enumerate(results):
-    my_image = edges_pb2.ProtoImage()
-    my_image.ParseFromString(res)
-    nparr = np.fromstring(my_image.image_data, np.float32)
-    instance_mask = nparr.reshape((my_image.h, my_image.w))
-    plt.imshow(instance_mask[:, :])
-    plt.show()
+# import soccer.instance_segmentation.edge_detection.edges_op.build.edges_pb2 as edges_pb2
+# import matplotlib.pyplot as plt
+#
+#
+# for i, res in enumerate(results):
+#     my_image = edges_pb2.ProtoImage()
+#     my_image.ParseFromString(res)
+#     nparr = np.fromstring(my_image.image_data, np.float32)
+#     instance_mask = nparr.reshape((my_image.h, my_image.w))
+#     plt.imshow(instance_mask[:, :])
+#     plt.show()
 # print(i, my_image.w)
 # break
 

@@ -71,11 +71,7 @@ if opt.cloud:
     db = Database(master=master, start_cluster=False, config_path='./config.toml',
                   grpc_timeout=60)
 else:
-    if opt.nworkers > 0:
-        master = 'localhost:5001'
-        db = Database(master=master, workers=['localhost:50{:02d}'.format(2 + d) for d in range(opt.nworkers)])
-    else:
-        db = Database()
+    db = Database()
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
 cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/edge_detection'

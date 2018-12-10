@@ -98,7 +98,7 @@ job = Job(
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size, pipeline_instances_per_node=1)
 end = time.time()
 print('scanner pose drawing: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
 

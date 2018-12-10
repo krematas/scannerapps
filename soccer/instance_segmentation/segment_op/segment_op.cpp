@@ -229,7 +229,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
     end = clock();
     elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    cout<<"segmentFromPoses : "<<elapsed_secs<<std::endl;
+    std::cout<<"segmentFromPoses : "<<elapsed_secs<<std::endl;
 
 
     cv::Mat new_mask(height, width, CV_8U);

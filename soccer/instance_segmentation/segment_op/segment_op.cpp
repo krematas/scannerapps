@@ -218,7 +218,7 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
     pDollar_->detectEdges(img2, edges);
     clock_t end = clock();
     double elapsed_secs = double(end - begin) / CLOCKS_PER_SEC;
-    cout<<"detect edges: "<<elapsed_secs<<std::endl;
+    std::cout<<"detect edges: "<<elapsed_secs<<std::endl;
 
     int height = image.rows;
     int width = image.cols;

@@ -175,11 +175,15 @@ class MySegmentKernel : public scanner::Kernel, public scanner::VideoKernel {
   MySegmentKernel(const scanner::KernelConfig& config)
       : scanner::Kernel(config) {
     // The protobuf arguments must be decoded from the input string.
+    auto start = scanner::now();
     MySegmentArgs args;
     args.ParseFromArray(config.args.data(), config.args.size());
     sigma1 = args.sigma1();
     sigma2 = args.sigma2();
     pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
+    if (profiler_) {
+      profiler_->add_interval("constructor", start, scanner::now());
+    }
   }
 
   // Execute is the core computation of the kernel. It maps a batch of rows

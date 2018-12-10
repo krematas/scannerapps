@@ -5,7 +5,6 @@ from scannerpy import FrameType
 import numpy as np
 import pickle
 
-
 def project(points3d, A, R, T, scale_factor=1.0, dtype=np.int32):
     """ Project a set of 3D points (Nx3 or 3XN) to a camera with parameters A, R T.
     Return the pixel coordinates and its corresponding depth

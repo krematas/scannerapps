@@ -1,3 +1,4 @@
+from scannerpy import  Database, Job
 from soccer.main.kernels import *
 import cv2
 import glob

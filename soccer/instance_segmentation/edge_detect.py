@@ -48,8 +48,8 @@ if __name__ == '__main__':
         image_files = glob.glob(join(dataset, 'players', 'images', '*.jpg'))
 
     image_files.sort()
-
-    image_files = image_files[:opt.total_files]
+    if opt.total_files > 0:
+        image_files = image_files[:opt.total_files]
 
     if opt.cloud:
         print('Finding master IP...')

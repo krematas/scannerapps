@@ -5,7 +5,7 @@ from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
 from scannerpy.stdlib import pipelines
 import time
 
-from os.path import join
+from os.path import join, basename
 import glob
 import os
 import subprocess as sp
@@ -129,16 +129,23 @@ if __name__ == '__main__':
 
     results = out_table.column('frame').load()
 
-    # import soccer.instance_segmentation.edge_detection.edges_op.build.edges_pb2 as edges_pb2
+    import soccer.instance_segmentation.edges_op.build.edges_pb2 as edges_pb2
     # import matplotlib.pyplot as plt
     #
     #
-    # for i, res in enumerate(results):
-    #     my_image = edges_pb2.ProtoImage()
-    #     my_image.ParseFromString(res)
-    #     nparr = np.fromstring(my_image.image_data, np.float32)
-    #     instance_mask = nparr.reshape((my_image.h, my_image.w))
-    #     plt.imshow(instance_mask[:, :])
-    #     plt.show()
+    def mkdir(path_to_dir):
+        if not os.path.exists(path_to_dir):
+            os.mkdir(path_to_dir)
+
+    mkdir(join(dataset, 'players', 'edges'))
+
+    for i, res in enumerate(results):
+        my_image = edges_pb2.ProtoImage()
+        my_image.ParseFromString(res)
+        nparr = np.fromstring(my_image.image_data, np.float32)
+        edges = nparr.reshape((my_image.h, my_image.w))
+
+        framename = basename(image_files[i])[:-4]
+        cv2.imwrite(join(dataset, 'players', 'edges', '{0}.png'.format(framename)), edges*255)
 
 

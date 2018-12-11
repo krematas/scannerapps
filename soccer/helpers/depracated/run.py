@@ -4,10 +4,10 @@ import argparse
 import os
 
 import time
-from soccer.main.kernels import *
+from soccer.helpers.kernels import *
 # import matplotlib.pyplot as plt
 
-import soccer.main.segment_op.build.segment_pb2 as segment_pb2
+import soccer.helpers.segment_op.build.segment_pb2 as segment_pb2
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
 parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
@@ -148,7 +148,7 @@ img = db.sources.FrameColumn()
 pose_img = db.sources.FrameColumn()
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
-cwd = '/home/krematas/code/scannerapps/soccer/main'
+cwd = '/home/krematas/code/scannerapps/soccer/helpers'
 if not os.path.isfile(os.path.join(cwd, 'segment_op/build/libsegment_op.so')):
     print(
         'You need to build the custom op first: \n'

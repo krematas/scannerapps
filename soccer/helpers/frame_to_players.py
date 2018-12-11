@@ -1,5 +1,5 @@
 from scannerpy import  Database, Job
-from soccer.main.kernels import *
+from soccer.helpers.kernels import *
 import cv2
 import glob
 from os.path import join, basename

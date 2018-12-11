@@ -1,7 +1,5 @@
-import numpy as np
-import soccer.protobuff_try.protofiles.image_pb2 as image_pb2
+import soccer.depracated.protobuff_try.protofiles.image_pb2 as image_pb2
 import cv2
-import matplotlib.pyplot as plt
 import pickle
 
 image = image_pb2.Image()

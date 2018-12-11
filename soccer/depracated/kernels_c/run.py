@@ -5,7 +5,7 @@ import argparse
 from os.path import join
 import pickle
 import cv2
-import soccer.kernels_c.resize_op.build.resize_pb2 as resize_pb2
+import soccer.depracated.kernels_c.resize_op.build.resize_pb2 as resize_pb2
 import numpy as np
 
 

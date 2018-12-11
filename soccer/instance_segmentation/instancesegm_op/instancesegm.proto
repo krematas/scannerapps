@@ -3,7 +3,6 @@ syntax = "proto3";
 message MySegmentArgs {
   float sigma1 = 3;
   float sigma2 = 4;
-  string model_path = 5;
 }
 
 message ProtoImage {

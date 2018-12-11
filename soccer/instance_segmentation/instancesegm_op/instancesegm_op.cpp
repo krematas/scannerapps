@@ -16,7 +16,8 @@ typedef Eigen::Triplet<var_t> T;
 typedef char byte;
 
 #include <ctime>
-
+#include "opencv2/highgui.hpp"
+#include "opencv2/core/utility.hpp"
 
 void getPixelNeighbors(int height, int width, std::vector<std::vector<int>>& neighborId){
 
@@ -198,19 +199,37 @@ class InstanceSegmentKernel : public scanner::Kernel, public scanner::VideoKerne
 
 
     // Edges image
-    const scanner::Frame* edge_frame = img_col.as_const_frame();
+    const scanner::Frame* edge_frame = edge_col.as_const_frame();
     cv::Mat edges = scanner::frame_to_mat(edge_frame);
+//    cv::Mat edges;
+//    cv::cvtColor(_edges, edges, CV_BGR2GRAY);
 
     edges.convertTo(edges, cv::DataType<var_t>::type, 1.0/255.0);
     var_t *edgesData = (var_t*)(edges.data);
 
 
 
+//std::cout<<image.channels()<<std::endl;
+//std::cout<<poseImage.channels()<<std::endl;
+//std::cout<<edges.channels()<<std::endl;
+
     // Segmentation part
     start = scanner::now();
 
-    int height = edges.rows;
-    int width = edges.cols;
+    int height = image.rows;
+    int width = image.cols;
+
+//    for(int i=0; i<height; i++) {
+//        for (int j = 0; j < width; j++) {
+//        if(i == 10){
+//        std::cout<<edgesData[i*width+j]<<std::endl;
+//        }
+//        }
+//        }
+
+//cv::namedWindow( "Display window", cv::WINDOW_AUTOSIZE );// Create a window for display.
+//    cv::imshow( "Display window", edges );                   // Show our image inside it.
+//    cv::waitKey(0);
 
     var_t* segm_output = segmentFromPoses(imgData, edgesData, poseData, height, width, sigma1, sigma2);
      if (profiler_) {

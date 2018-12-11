@@ -138,17 +138,17 @@ print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
 results = out_table.column('frame').load()
 
-# import soccer.instance_segmentation.segment_op.build.segment_pb2 as segment_pb2
-# import matplotlib.pyplot as plt
-#
-#
-# for i, res in enumerate(results):
-#     my_image = segment_pb2.MyImage()
-#     my_image.ParseFromString(res)
-#     nparr = np.fromstring(my_image.image_data, np.uint8)
-#     instance_mask = nparr.reshape((my_image.h, my_image.w))
-#     plt.imshow(instance_mask)
-#     plt.show()
+import soccer.instance_segmentation.segment_op.build.segment_pb2 as segment_pb2
+import matplotlib.pyplot as plt
+
+
+for i, res in enumerate(results):
+    my_image = segment_pb2.MyImage()
+    my_image.ParseFromString(res)
+    nparr = np.fromstring(my_image.image_data, np.uint8)
+    instance_mask = nparr.reshape((my_image.h, my_image.w))
+    plt.imshow(instance_mask)
+    plt.show()
     # print(i, my_image.w)
     # break
 

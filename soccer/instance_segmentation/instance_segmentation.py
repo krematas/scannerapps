@@ -111,26 +111,26 @@ params = {'bucket': opt.bucket,
           'endpoint': 'storage.googleapis.com',
           'region': 'US'}
 
+
 encoded_image = db.sources.Files(**params)
 frame = db.ops.ImageDecoder(img=encoded_image)
 
 encoded_poseimg = db.sources.Files(**params)
 poseimg_frame = db.ops.ImageDecoder(img=encoded_poseimg)
 
-
 encoded_edges = db.sources.Files(**params)
 edge_frame = db.ops.ImageDecoder(img=encoded_edges)
 
 
-my_segment_imageset_class = db.ops.InstanceSegment(
-    frame=frame, poseimg=poseimg_frame, edges=edge_frame,
-    sigma1=1.0, sigma2=0.01)
+my_segment_imageset_class = db.ops.InstanceSegment(frame=frame, poseimg=poseimg_frame, edges=edge_frame,
+                                                   sigma1=1.0, sigma2=0.01)
 output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
 
 job = Job(
     op_args={
         encoded_image: {'paths': image_files, **params},
         encoded_poseimg: {'paths': poseimg_files, **params},
+        encoded_edges: {'paths': edge_files, **params},
 
         output_op: 'example_resized',
     })
@@ -148,12 +148,12 @@ print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
 # results = out_table.column('frame').load()
 
-# import soccer.instance_segmentation.segment_op.build.segment_pb2 as segment_pb2
+# import soccer.instance_segmentation.instancesegm_op.build.instancesegm_pb2 as instancesegm_pb2
 # import matplotlib.pyplot as plt
 #
 #
 # for i, res in enumerate(results):
-#     my_image = segment_pb2.MyImage()
+#     my_image = instancesegm_pb2.ProtoImage()
 #     my_image.ParseFromString(res)
 #     nparr = np.fromstring(my_image.image_data, np.uint8)
 #     instance_mask = nparr.reshape((my_image.h, my_image.w))

@@ -74,7 +74,7 @@ else:
     db = Database()
 
 # cwd = os.path.dirname(os.path.abspath(__file__))
-cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/edge_detection'
+cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/'
 if not os.path.isfile(os.path.join(cwd, 'edges_op/build/libedges_op.so')):
     print(
         'You need to build the custom op first: \n'

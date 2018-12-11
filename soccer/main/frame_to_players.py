@@ -34,7 +34,12 @@ print('Processing dataset: {0}'.format(dataset))
 
 h, w = 1080, 1920
 
-db = Database()
+if opt.nworkers > 0:
+    master = 'localhost:5001'
+    workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002 + opt.nworkers)]
+    db = Database(master=master, workers=workers)
+else:
+    db = Database()
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,
@@ -93,12 +98,13 @@ job = Job(
         encoded_image: {'paths': image_files, **params},
         encoded_mask: {'paths': mask_files, **params},
         data: {'data': pickle.dumps(pose_data)},
-        output_op: 'example_resized55',
+        output_op: 'example_resized',
     })
 
 
 start = time.time()
-[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size, io_packet_size=opt.io_packet_size, pipeline_instances_per_node=1)
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
+                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=1, tasks_in_queue_per_pu=1)
 end = time.time()
 print('scanner pose drawing: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
 

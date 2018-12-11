@@ -54,9 +54,10 @@ image_files.sort()
 poseimg_files.sort()
 edge_files.sort()
 
-image_files = image_files[:opt.total_files]
-poseimg_files = poseimg_files[:opt.total_files]
-edge_files = edge_files[:opt.total_files]
+if opt.total_files > 0:
+    image_files = image_files[:opt.total_files]
+    poseimg_files = poseimg_files[:opt.total_files]
+    edge_files = edge_files[:opt.total_files]
 
 if opt.cloud:
     print('Finding master IP...')

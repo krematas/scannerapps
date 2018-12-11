@@ -1,241 +1,185 @@
-import scannerpy
-import cv2
-import numpy as np
+from scannerpy import Database, Job
 import glob
 from os.path import join, basename
-from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
-from scannerpy.stdlib import pipelines
-from skimage.morphology import medial_axis
+import os
 
-import subprocess
-import os.path
 import numpy as np
 import time
-import utils as utils
+import soccer.calibration.utils as utils
 import matplotlib.pyplot as plt
+from tqdm import tqdm
+import argparse
 
-@scannerpy.register_python_op()
-class CalibrationClass(scannerpy.Kernel):
-    # __init__ is called once at the creation of the pipeline. Any arguments passed to the kernel
-    # are provided through a protobuf object that you manually deserialize. See resize.proto for the
-    # protobuf definition.
-    def __init__(self, config):
-        self.w = None # config.args['w']
-        self.h = None # config.args['h']
-        self.A = None # config.args['A']
-        self.R = None # config.args['R']
-        self.T = None # config.args['T']
+if __name__ == '__main__':
 
-    def new_stream(self, args):
-        if args is None:
-            return
-        if 'w' in args:
-            self.w = args['w']
-        if 'h' in args:
-            self.h = args['h']
-        if 'A' in args:
-            self.A = args['A']
-        if 'R' in args:
-            self.R = args['R']
-        if 'T' in args:
-            self.T = args['T']
+    parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
+    parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/')
+    parser.add_argument('--visualize', action='store_true')
+    parser.add_argument('--cloud', action='store_true')
+    parser.add_argument('--bucket', default='', type=str)
+    parser.add_argument('--video', type=int, default=5, help='Margin around the pose')
+    parser.add_argument('--framestep', type=int, default=10, help='Margin around the pose')
+    parser.add_argument('--nworkers', type=int, default=0, help='Margin around the pose')
+    parser.add_argument('--work_packet_size', type=int, default=2, help='Margin around the pose')
+    parser.add_argument('--io_packet_size', type=int, default=4, help='Margin around the pose')
+    parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
 
-    # execute is the core computation routine maps inputs to outputs, e.g. here resizes an input
-    # frame to a smaller output frame.
-    def execute(self, frame: FrameType, mask: FrameType) -> FrameType:
-        edge_sfactor = 1.0
-        edges = utils.robust_edge_detection(cv2.resize(frame[:, :, ::-1], None, fx=edge_sfactor, fy=edge_sfactor))
-        skel = medial_axis(edges, return_distance=False)
+    opt, _ = parser.parse_known_args()
 
-        edges = skel.astype(np.uint8)
-        # edges = cv2.resize(edges, None, fx=1. / edge_sfactor, fy=1. / edge_sfactor)
-        # edges = cv2.Canny(edges.astype(np.uint8) * 255, 100, 200) / 255.0
+    path_to_data = opt.path_to_data
 
-        mask = cv2.dilate(mask[:, :, 0], np.ones((25, 25), dtype=np.uint8))/255
+    goal_dirs = [item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item)) ]
+    goal_dirs.sort()
 
-        edges = edges * (1 - mask)
-        dist_transf = cv2.distanceTransform((1 - edges).astype(np.uint8), cv2.DIST_L2, 0)
+    dataset = join(path_to_data,goal_dirs[opt.video])
+    print('Processing dataset: {0}'.format(dataset))
 
-        template, field_mask = utils.draw_field(self.A, self.R, self.T, self.h, self.w)
+    h, w = 1080, 1920
+
+    if opt.nworkers > 0:
+        master = 'localhost:5001'
+        workers = ['localhost:{:d}'.format(d) for d in range(5002, 5002 + opt.nworkers)]
+        db = Database(master=master, workers=workers)
+    else:
+        db = Database()
+
+    config = db.config.config['storage']
+    params = {'bucket': opt.bucket,
+              'storage_type': config['type'],
+              'endpoint': 'storage.googleapis.com',
+              'region': 'US'}
+
+    image_files_all = glob.glob(join(dataset, 'images', '*.jpg'))
+    image_files_all.sort()
+
+    mask_files_all = glob.glob(join(dataset, 'detectron', '*.png'))
+    mask_files_all.sort()
+
+    cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename(image_files_all[0])[:-4]))).item()
+
+    image_files = [image_files_all[i] for i in range(0, len(image_files_all), opt.framestep)]
+    mask_files = [mask_files_all[i] for i in range(0, len(mask_files_all), opt.framestep)]
+    indeces = [i for i in range(0, len(image_files_all), opt.framestep)]
+
+    if image_files_all[-1] not in image_files:
+        image_files.append(image_files_all[-1])
+        mask_files.append(mask_files_all[-1])
+        indeces.append(len(image_files_all)-1)
+
+    encoded_image = db.sources.Files(**params)
+    frame_img = db.ops.ImageDecoder(img=encoded_image)
+
+    encoded_mask = db.sources.Files(**params)
+    frame_mask = db.ops.ImageDecoder(img=encoded_mask)
+
+
+    cwd = '/home/krematas/code/scannerapps/soccer/calibration/'
+    db.load_op(os.path.join(cwd, 'distancetr_op/build/libdistancetr_op.so'), os.path.join(cwd, 'distancetr_op/build/distance_pb2.py'))
+
+    dist_transform_class = db.ops.DistanceTransform(frame=frame_img, mask=frame_mask, h=h, w=w)
+    output_op = db.sinks.FrameColumn(columns={'frame': dist_transform_class})
+
+    job = Job(
+        op_args={
+        encoded_image: {'paths': image_files, **params},
+        encoded_mask: {'paths': mask_files, **params},
+        output_op: 'example_resized55',
+    })
+
+
+    start = time.time()
+    [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
+                         io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node)
+    end = time.time()
+    print('scanner distance transform: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
+
+    results = out_table.column('frame').load()
+    dist_transf_list = [res[:, :, 0] for res in results]
+
+
+    A, R, T = cam_data['A'], cam_data['R'], cam_data['T']
+    h, w = 1080, 1920
+
+    CAMERAS_A = {i: None for i in range(len(image_files_all))}
+    CAMERAS_R = {i: None for i in range(len(image_files_all))}
+    CAMERAS_T = {i: None for i in range(len(image_files_all))}
+    CAMERAS_A[0] = A
+    CAMERAS_R[0] = R
+    CAMERAS_T[0] = T
+
+
+    n_frames = len(image_files)
+    start = time.time()
+    for j in tqdm(range(1, n_frames), ncols=50):
+        dist_transf = dist_transf_list[j]
+        template, field_mask = utils.draw_field(A, R, T, h, w)
 
         II, JJ = (template > 0).nonzero()
         synth_field2d = np.array([[JJ, II]]).T[:, :, 0]
+        field3d = utils.plane_points_to_3d(synth_field2d, A, R, T)
 
-        # cv2.imwrite(time.asctime()+'.jpg', template*255)
-        field3d = utils.plane_points_to_3d(synth_field2d, self.A, self.R, self.T)
+        A, R, T = utils.calibrate_camera_dist_transf(A, R, T, dist_transf, field3d)
 
-        self.A, self.R, self.T = utils.calibrate_camera_dist_transf(self.A, self.R, self.T, dist_transf, field3d)
+        CAMERAS_A[indeces[j]] = A
+        CAMERAS_R[indeces[j]] = R
+        CAMERAS_T[indeces[j]] = T
+        # print('optim: {0:.4f}\n\n'.format(end - start))
 
-        rgb = frame.copy()
-        canvas, mask = utils.draw_field(self.A, self.R, self.T, self.h, self.w)
-        canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
-        rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+        # if j == n_frames-1:
+        #     frame = cv2.imread(image_files[j])[:, :, ::-1]
+        #     rgb = frame.copy()
+        #     canvas, mask = utils.draw_field(A, R, T, h, w)
+        #     canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+        #     rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+        #
+        #     # result = np.dstack((template, template, template))*255
+        #
+        #     out = rgb.astype(np.uint8)
+        #
+        #     end = time.time()
+        #     print('calibration: {0:.4f}'.format(end - start))
+        #
+        #     plt.imshow(out)
+        #     plt.show()
 
-        # result = np.dstack((template, template, template))*255
-
-        out = rgb.astype(np.uint8)
-        # cv2.imwrite(time.asctime()+'.jpg', out)
-        return out
-
-
-path_to_data = '/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018'
-dataset_list = [join(path_to_data, 'adnan-januzaj-goal-england-v-belgium-match-45'), join(path_to_data, 'ahmed-fathy-s-own-goal-russia-egypt'), join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland'), join(path_to_data, 'ahmed-musa-2nd-goal-nigeria-iceland')]
-dataset_list = [join(path_to_data, 'ahmed-musa-1st-goal-nigeria-iceland')]
-
-bucket = ''
-
-db = Database()
-
-config = db.config.config['storage']
-params = {'bucket': bucket,
-          'storage_type': config['type'],
-          'endpoint': 'storage.googleapis.com',
-          'region': 'US'}
+    end = time.time()
+    print('calibration: {0:.4f}'.format(end - start))
 
 
-video_list_scanner = []
-video_names = []
-imagename_list, maskname_list = [], []
-calibs = []
+    for j in range(len(indeces)-1):
+        start, end = indeces[j], indeces[j+1]
+        f_s, f_e = CAMERAS_A[start][0, 0], CAMERAS_A[end][0, 0]
+        T_s, T_e = CAMERAS_T[start], CAMERAS_T[end]
+        angles_s, angles_t = utils.get_angle_from_rotation(CAMERAS_R[start]), utils.get_angle_from_rotation(CAMERAS_R[end])
 
-for dataset in dataset_list:
-    video_list_scanner.append((basename(dataset), join(dataset, 'video.mp4')))
-    video_list_scanner.append((basename(dataset) + '_mask', join(dataset, 'mask.mp4')))
+        interm_f = np.linspace(f_s, f_e, end-start)[1:]
+        interm_R = np.zeros((3, end - start - 1))
+        interm_T = np.zeros((3, end - start - 1))
 
-    video_names.append(basename(dataset))
+        for k in range(3):
+            interm_R[k, :] = np.linspace(angles_s[k], angles_t[k], end - start)[1:]
+            interm_T[k, :] = np.linspace(T_s[k, 0], T_e[k, 0], end - start)[1:]
 
-    image_files = glob.glob(join(dataset, 'images', '*.jpg'))
-    image_files.sort()
-    imagename_list.append(image_files)
+        for k in range(start+1, end):
+            if CAMERAS_A[k] is not None:
+                print('hahahahahahaha')
+            else:
+                A = np.eye(3, 3)
+                A[0, 0] = A[1, 1] = interm_f[k-(start+1)]
+                A[0, 2] = w / 2.0
+                A[1, 2] = h / 2.0
+                CAMERAS_A[k] = A
 
-    mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
-    mask_files.sort()
-    maskname_list.append(mask_files)
+                R = utils.Rz(interm_R[2, k-(start+1)])@utils.Ry(interm_R[1, k-(start+1)])@utils.Rx(interm_R[0, k-(start+1)])
+                CAMERAS_R[k] = R
 
-    cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename(image_files[0])[:-4]))).item()
-    calibs.append(cam_data)
+                T = np.zeros((3, 1))
+                T[0, 0] = interm_T[0, k - (start + 1)]
+                T[1, 0] = interm_T[1, k - (start + 1)]
+                T[2, 0] = interm_T[2, k - (start + 1)]
+                CAMERAS_T[k] = T
 
-
-# input_table, failed = db.ingest_videos(video_list_scanner, force=True)
-
-
-frame = db.sources.FrameColumn()
-mask = db.sources.FrameColumn()
-
-encoded_image = db.sources.Files(**params)
-frame_img = db.ops.ImageDecoder(img=encoded_image)
-
-encoded_mask = db.sources.Files(**params)
-frame_mask = db.ops.ImageDecoder(img=encoded_mask)
-
-
-i = 0
-calibrate_video_class = db.ops.CalibrationClass(frame=frame_img, mask=frame_mask)
-output_op = db.sinks.FrameColumn(columns={'frame': calibrate_video_class})
-
-jobs = []
-for i in range(len(video_names)):
-
-    job = Job(op_args={
-        # frame: db.table(video_names[i]).column('frame'),
-        # mask: db.table(video_names[i]+'_mask').column('frame'),
-
-        encoded_image: {'paths': imagename_list[i], **params},
-        encoded_mask: {'paths': maskname_list[i], **params},
-        calibrate_video_class: {'w': 1920, 'h': 1080, 'A': calibs[i]['A'], 'R': calibs[i]['R'], 'T': calibs[i]['T']},
-        output_op: 'example_resized_{0}'.format(i),
-        })
-
-    jobs.append(job)
-
-start = time.time()
-tables = db.run(output_op, jobs, force=True)
-end = time.time()
-
-for i in range(len(video_names)):
-    savename = join(path_to_data, video_names[i], 'calib_scanner2')
-    tables[i].column('frame').save_mp4(savename)
-print('Successfully generated {0}_faces.mp4 in {1:.3f} secs'.format(savename, end-start))
-
-# # ======================================================================================================================
-# # Images
-# # ======================================================================================================================
-#
-# total_files = -1
-# image_files = glob.glob(join(dataset_list[0], 'images', '*.jpg'))
-# image_files.sort()
-# image_files = image_files[:total_files]
-#
-# encoded_image = db.sources.Files(**params)
-# frame_img = db.ops.ImageDecoder(img=encoded_image)
-#
-# # ======================================================================================================================
-# # Images
-# # ======================================================================================================================
-#
-# mask_files = glob.glob(join(dataset_list[0], 'detectron', '*.png'))
-# mask_files.sort()
-# mask_files = mask_files[:total_files]
-#
-# encoded_mask = db.sources.Files(**params)
-# frame_mask = db.ops.ImageDecoder(img=encoded_mask)
-#
-# basename = os.path.basename(image_files[0]).replace('.jpg', '')
-# cam_data = np.load(join(dataset_list[0], 'calib', '{0}.npy'.format(basename))).item()
-#
-# # frame = db.sources.FrameColumn()
-# # mask = db.sources.FrameColumn()
-#
-# calibrate_video_class = db.ops.CalibrationClass(frame=frame_img, mask=frame_mask, w=3840//2, h=2160//2, A=cam_data['A'], R=cam_data['R'], T=cam_data['T'])
-# output_op = db.sinks.FrameColumn(columns={'frame': calibrate_video_class})
-#
-#
-# jobs = []
-# for dataset in dataset_list:
-#     # ======================================================================================================================
-#     # Images
-#     # ======================================================================================================================
-#
-#     total_files = -1
-#     image_files = glob.glob(join(dataset, 'images', '*.jpg'))
-#     image_files.sort()
-#     image_files = image_files[:total_files]
-#
-#     encoded_image = db.sources.Files(**params)
-#     frame_img = db.ops.ImageDecoder(img=encoded_image)
-#
-#     # ======================================================================================================================
-#     # Images
-#     # ======================================================================================================================
-#
-#     mask_files = glob.glob(join(dataset, 'detectron', '*.png'))
-#     mask_files.sort()
-#     mask_files = mask_files[:total_files]
-#
-#     encoded_mask = db.sources.Files(**params)
-#     frame_mask = db.ops.ImageDecoder(img=encoded_mask)
-#
-#     basename = os.path.basename(image_files[0]).replace('.jpg', '')
-#     cam_data = np.load(join(dataset, 'calib', '{0}.npy'.format(basename))).item()
-#
-#     # frame = db.sources.FrameColumn()
-#     # mask = db.sources.FrameColumn()
-#
-#     # calibrate_video_class = db.ops.CalibrationClass(frame=frame_img, mask=frame_mask, w=3840//2, h=2160//2, A=cam_data['A'], R=cam_data['R'], T=cam_data['T'])
-#     # output_op = db.sinks.FrameColumn(columns={'frame': calibrate_video_class})
-#
-#     job = Job(op_args={
-#         encoded_image: {'paths': image_files, **params},
-#         encoded_mask: {'paths': mask_files, **params},
-#         calibrate_video_class: {'w':3840//2, 'h':2160//2, 'A':cam_data['A'], 'R':cam_data['R'], 'T':cam_data['T']},
-#         output_op: 'example_resized',
-#     })
-#     jobs.append(job)
-#
-#
-# start = time.time()
-# [out_table] = db.run(output_op, jobs, force=True)
-# end = time.time()
-#
-# out_table.column('frame').save_mp4(join(dataset, 'calib_scanner.mp4'))
-# print('Successfully generated {0}_faces.mp4 in {1:.3f} secs'.format(join(dataset, 'calib_scanner.mp4'), end-start))
+    for i in range(1, len(image_files_all)):
+        fname = basename(image_files_all[i])[:-4]
+        np.save(join(dataset, 'calib', fname+'.npy'), {'A': CAMERAS_A[i], 'R': CAMERAS_R[i], 'T': CAMERAS_T[i]})
+    print('Calibration files saved for : {0}'.format(dataset))

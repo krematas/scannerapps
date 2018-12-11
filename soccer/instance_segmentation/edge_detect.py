@@ -14,7 +14,6 @@ import argparse
 
 if __name__ == '__main__':
 
-
     parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
     parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
     parser.add_argument('--visualize', action='store_true')

@@ -1,7 +1,8 @@
+#!/usr/bin/env bash
 export PROJECT=$(gcloud config get-value project)
 echo $PROJECT
 
-TAG=gpu-8.0-cudnn6-latest
+TAG=cpu
 docker pull scannerresearch/scanner:$TAG
 docker build -f Dockerfile.master -t gcr.io/$PROJECT/scanner-master:$TAG .
 docker build -f Dockerfile.worker -t gcr.io/$PROJECT/scanner-worker:$TAG .

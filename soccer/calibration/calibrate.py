@@ -95,9 +95,11 @@ if __name__ == '__main__':
     end = time.time()
     print('scanner distance transform: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
 
+    out_table.profiler().write_trace(join(dataset, 'calib.trace'))
+    print('Trace saved in {0}'.format(join(dataset, 'calib.trace')))
+
     results = out_table.column('frame').load()
     dist_transf_list = [res[:, :, 0] for res in results]
-
 
     A, R, T = cam_data['A'], cam_data['R'], cam_data['T']
     h, w = 1080, 1920

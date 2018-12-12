@@ -25,7 +25,6 @@ if __name__ == '__main__':
     parser.add_argument('--work_packet_size', type=int, default=2, help='Margin around the pose')
     parser.add_argument('--io_packet_size', type=int, default=4, help='Margin around the pose')
     parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
-    parser.add_argument('--visualize', action='store_true')
 
     opt, _ = parser.parse_known_args()
 

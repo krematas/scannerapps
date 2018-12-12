@@ -9,6 +9,8 @@ import soccer.calibration.utils as utils
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 import argparse
+import cv2
+
 
 if __name__ == '__main__':
 
@@ -23,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--work_packet_size', type=int, default=2, help='Margin around the pose')
     parser.add_argument('--io_packet_size', type=int, default=4, help='Margin around the pose')
     parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
+    parser.add_argument('--visualize', action='store_true')
 
     opt, _ = parser.parse_known_args()
 
@@ -125,22 +128,23 @@ if __name__ == '__main__':
         CAMERAS_T[indeces[j]] = T
         # print('optim: {0:.4f}\n\n'.format(end - start))
 
-        # if j == n_frames-1:
-        #     frame = cv2.imread(image_files[j])[:, :, ::-1]
-        #     rgb = frame.copy()
-        #     canvas, mask = utils.draw_field(A, R, T, h, w)
-        #     canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
-        #     rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
-        #
-        #     # result = np.dstack((template, template, template))*255
-        #
-        #     out = rgb.astype(np.uint8)
-        #
-        #     end = time.time()
-        #     print('calibration: {0:.4f}'.format(end - start))
-        #
-        #     plt.imshow(out)
-        #     plt.show()
+        if opt.visualize:
+            if j == n_frames-1:
+                frame = cv2.imread(image_files[j])[:, :, ::-1]
+                rgb = frame.copy()
+                canvas, mask = utils.draw_field(A, R, T, h, w)
+                canvas = cv2.dilate(canvas.astype(np.uint8), np.ones((15, 15), dtype=np.uint8)).astype(float)
+                rgb = rgb * (1 - canvas)[:, :, None] + np.dstack((canvas * 255, np.zeros_like(canvas), np.zeros_like(canvas)))
+
+                # result = np.dstack((template, template, template))*255
+
+                out = rgb.astype(np.uint8)
+
+                end = time.time()
+                print('calibration: {0:.4f}'.format(end - start))
+
+                plt.imshow(out)
+                plt.show()
 
     end = time.time()
     print('calibration: {0:.4f}'.format(end - start))

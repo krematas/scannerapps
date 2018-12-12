@@ -3,6 +3,7 @@ import cv2
 import numpy as np
 from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
 from scannerpy.stdlib import pipelines
+import soccer.instance_segmentation.edges_op.build.edges_pb2 as edges_pb2
 import time
 
 from os.path import join, basename
@@ -24,6 +25,7 @@ if __name__ == '__main__':
     parser.add_argument('--work_packet_size', type=int, default=2)
     parser.add_argument('--io_packet_size', type=int, default=4)
     parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
+    parser.add_argument('--save', action='store_true')
 
     opt, _ = parser.parse_known_args()
 
@@ -120,31 +122,27 @@ if __name__ == '__main__':
                          io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
                          tasks_in_queue_per_pu=1)
     end = time.time()
-    print(
-        'Total time for edge detection in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
+    print('Total time for edge detection in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
     out_table.profiler().write_trace(join(dataset, 'hist.trace'))
     print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
-    results = out_table.column('frame').load()
+    if opt.save:
+        results = out_table.column('frame').load()
 
-    import soccer.instance_segmentation.edges_op.build.edges_pb2 as edges_pb2
-    # import matplotlib.pyplot as plt
-    #
-    #
-    def mkdir(path_to_dir):
-        if not os.path.exists(path_to_dir):
-            os.mkdir(path_to_dir)
+        def mkdir(path_to_dir):
+            if not os.path.exists(path_to_dir):
+                os.mkdir(path_to_dir)
 
-    mkdir(join(dataset, 'players', 'edges'))
+        mkdir(join(dataset, 'players', 'edges'))
 
-    for i, res in enumerate(results):
-        my_image = edges_pb2.ProtoImage()
-        my_image.ParseFromString(res)
-        nparr = np.fromstring(my_image.image_data, np.float32)
-        edges = nparr.reshape((my_image.h, my_image.w))
+        for i, res in enumerate(results):
+            my_image = edges_pb2.ProtoImage()
+            my_image.ParseFromString(res)
+            nparr = np.fromstring(my_image.image_data, np.float32)
+            edges = nparr.reshape((my_image.h, my_image.w))
 
-        framename = basename(image_files[i])[:-4]
-        cv2.imwrite(join(dataset, 'players', 'edges', '{0}.png'.format(framename)), edges*255)
+            framename = basename(image_files[i])[:-4]
+            cv2.imwrite(join(dataset, 'players', 'edges', '{0}.png'.format(framename)), edges*255)
 
 

@@ -47,6 +47,7 @@ if __name__ == '__main__':
     image_files.sort()
     if opt.total_files > 0:
         image_files = image_files[:opt.total_files]
+    print('Total files: {0}'.format(len(image_files)))
 
     if opt.cloud:
         print('Finding master IP...')
@@ -68,8 +69,8 @@ if __name__ == '__main__':
 
         master = '{}:{}'.format(ip, port)
         print(master)
-        db = Database(master=master, start_cluster=False, config_path='./config.toml',
-                      grpc_timeout=60)
+        db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
+        print('db was created.')
     else:
         db = Database()
 
@@ -111,7 +112,6 @@ if __name__ == '__main__':
             output_op: 'example_resized',
         })
 
-    print('Total files: {0}'.format(len(image_files)))
 
     start = time.time()
     [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,

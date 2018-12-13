@@ -1,16 +1,12 @@
-import scannerpy
 import cv2
 import numpy as np
-from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
-from scannerpy.stdlib import pipelines
+from scannerpy import Database, Job
 import soccer.instance_segmentation.edges_op.build.edges_pb2 as edges_pb2
 import time
-
 from os.path import join, basename
 import glob
 import os
 import subprocess as sp
-
 import argparse
 
 if __name__ == '__main__':
@@ -82,8 +78,7 @@ if __name__ == '__main__':
     if not os.path.isfile(os.path.join(cwd, 'edges_op/build/libedges_op.so')):
         print(
             'You need to build the custom op first: \n'
-            '$ pushd {}/edges_op; mkdir build && cd build; cmake ..; make; popd'.
-                format(cwd))
+            '$ pushd {}/edges_op; mkdir build && cd build; cmake ..; make; popd'.format(cwd))
         exit()
 
     # To load a custom op into the Scanner runtime, we use db.load_op to open the
@@ -97,7 +92,6 @@ if __name__ == '__main__':
         db.load_op(
             os.path.join(cwd, 'edges_op/build/libedges_op.so'),
             os.path.join(cwd, 'edges_op/build/edges_pb2.py'))
-
 
     config = db.config.config['storage']
     params = {'bucket': opt.bucket,
@@ -124,8 +118,8 @@ if __name__ == '__main__':
     end = time.time()
     print('Total time for edge detection in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-    out_table.profiler().write_trace(join(dataset, 'hist.trace'))
-    print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
+    # out_table.profiler().write_trace(join(dataset, 'hist.trace'))
+    # print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
     if opt.save:
         results = out_table.column('frame').load()
@@ -144,5 +138,3 @@ if __name__ == '__main__':
 
             framename = basename(image_files[i])[:-4]
             cv2.imwrite(join(dataset, 'players', 'edges', '{0}.png'.format(framename)), edges*255)
-
-

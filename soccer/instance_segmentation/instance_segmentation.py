@@ -84,13 +84,11 @@ if opt.cloud:
 else:
     db = Database()
 
-# cwd = os.path.dirname(os.path.abspath(__file__))
-cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/'
+cwd = os.path.dirname(os.path.abspath(__file__))
 if not os.path.isfile(os.path.join(cwd, 'instancesegm_op/build/libinstancesegm_op.so')):
     print(
         'You need to build the custom op first: \n'
-        '$ pushd {}/instancesegm_op; mkdir build && cd build; cmake ..; make; popd'.
-            format(cwd))
+        '$ pushd {}/instancesegm_op; mkdir build && cd build; cmake ..; make; popd'.format(cwd))
     exit()
 
 # To load a custom op into the Scanner runtime, we use db.load_op to open the
@@ -141,11 +139,10 @@ start = time.time()
                      io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
                      tasks_in_queue_per_pu=1)
 end = time.time()
-print(
-    'Total time for instance segmentation in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
+print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-out_table.profiler().write_trace(join(dataset, 'hist.trace'))
-print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
+# out_table.profiler().write_trace(join(dataset, 'hist.trace'))
+# print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
 # results = out_table.column('frame').load()
 
@@ -165,4 +162,3 @@ print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
 
 
 # my_image = segment_pb2.MyImage()
-

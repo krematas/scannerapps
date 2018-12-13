@@ -35,7 +35,5 @@ spec:
           resources:
             requests:
               cpu: 6.5
-            limits:
-              nvidia.com/gpu: 0
       nodeSelector:
         cloud.google.com/gke-nodepool: default-pool

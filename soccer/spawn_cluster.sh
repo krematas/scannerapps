@@ -4,7 +4,7 @@ export ZONE=us-west1-b
 CLUSTER_NAME=soccer-cluster
 gcloud beta container clusters create $CLUSTER_NAME \
        --zone "$ZONE" \
-       --machine-type "n1-standard-32" \
+       --machine-type "n1-highcpu-32" \
        --num-nodes 1 \
        --cluster-version 1.9
 
@@ -13,7 +13,7 @@ gcloud container clusters get-credentials $CLUSTER_NAME --zone "$ZONE"
 gcloud beta container node-pools create workers \
        --zone "$ZONE" \
        --cluster $CLUSTER_NAME \
-       --machine-type "n1-standard-32" \
+       --machine-type "n1-highcpu-32" \
        --num-nodes 1 \
        --enable-autoscaling \
        --min-nodes 0 \

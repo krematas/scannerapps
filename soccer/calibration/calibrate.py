@@ -16,7 +16,7 @@ import subprocess as sp
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
-    parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/')
+    parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/emil-forsberg-goal-sweden-v-switzerland-match-55')
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--cloud', action='store_true')
     parser.add_argument('--bucket', default='', type=str)
@@ -30,12 +30,12 @@ if __name__ == '__main__':
 
     opt, _ = parser.parse_known_args()
 
-    path_to_data = opt.path_to_data
+    # path_to_data = opt.path_to_data
+    #
+    # goal_dirs = [item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item))]
+    # goal_dirs.sort()
 
-    goal_dirs = [item for item in os.listdir(path_to_data) if os.path.isdir(os.path.join(path_to_data, item))]
-    goal_dirs.sort()
-
-    dataset = join(path_to_data, goal_dirs[opt.video])
+    dataset = opt.path_to_data
     print('Processing dataset: {0}'.format(dataset))
 
     h, w = 1080, 1920

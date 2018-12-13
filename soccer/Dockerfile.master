@@ -1,4 +1,4 @@
-FROM scannerresearch/scanner:gpu-8.0-cudnn6
+FROM scannerresearch/scanner:cpu
 WORKDIR /app
 
 # Build segment kernel

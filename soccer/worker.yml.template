@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
         - name: scanner-worker
-          image: gcr.io/YOUR_PROJECT_ID/scanner-worker:gpu-8.0-cudnn6-latest
+          image: gcr.io/YOUR_PROJECT_ID/scanner-worker:cpu-latest
           imagePullPolicy: Always
           env:
             - name: AWS_ACCESS_KEY_ID
@@ -36,6 +36,6 @@ spec:
             requests:
               cpu: 7.1
             limits:
-              nvidia.com/gpu: 1
+              nvidia.com/gpu: 0
       nodeSelector:
         cloud.google.com/gke-nodepool: workers

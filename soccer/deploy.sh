@@ -2,6 +2,8 @@
 export PROJECT=$(gcloud config get-value project)
 echo $PROJECT
 
+# sudo usermod -aG docker $USER
+
 TAG=cpu
 docker pull scannerresearch/scanner:$TAG
 docker build -f Dockerfile.master -t gcr.io/$PROJECT/scanner-master:$TAG .

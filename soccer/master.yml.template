@@ -11,7 +11,7 @@ spec:
     spec:
       containers:
         - name: scanner-master
-          image: gcr.io/YOUR_PROJECT_ID/scanner-master:cpu-latest
+          image: gcr.io/YOUR_PROJECT_ID/scanner-master:cpu
           imagePullPolicy: Always
           env:
             - name: AWS_ACCESS_KEY_ID

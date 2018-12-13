@@ -5,9 +5,9 @@ CLUSTER_NAME=soccer-cluster
 gcloud beta container clusters create $CLUSTER_NAME \
        --zone "$ZONE" \
        --machine-type "n1-highcpu-32" \
-       --num-nodes 1 \
-       --cluster-version 1.9\
-       --no-enable-basic-auth
+       --num-nodes 1
+#       --cluster-version 1.9\
+#       --no-enable-basic-auth
 
 gcloud container clusters get-credentials $CLUSTER_NAME --zone "$ZONE"
 

@@ -1,5 +1,9 @@
 syntax = "proto3";
 
+message MySegmentArgs {
+  string model_path = 1;
+}
+
 message ProtoImage {
   int32 w = 1;
   int32 h = 2;

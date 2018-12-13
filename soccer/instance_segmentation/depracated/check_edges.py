@@ -14,7 +14,7 @@ fig, ax = plt.subplots(1, 2)
 ax[0].imshow(mag)
 
 
-pd = cv2.ximgproc.createStructuredEdgeDetection('/home/krematas/code/scannerapps/model.yml.gz')
+pd = cv2.ximgproc.createStructuredEdgeDetection('/home/krematas/code/scannerapps/edge_model.yml.gz')
 img = cv2.imread(path_to_img)
 edges = pd.detectEdges(img.astype(np.float32)/255.0)
 

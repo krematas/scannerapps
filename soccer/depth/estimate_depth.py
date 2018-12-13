@@ -33,9 +33,10 @@ opt, _ = parser.parse_known_args()
 class MyDepthEstimationClass(scannerpy.Kernel):
     def __init__(self, config):
         if opt.cloud:
-           checkpoint = torch.load('model.pth')
+           # checkpoint = torch.load('model.pth')
+           checkpoint = torch.load(config.args['model_path'])
         else:
-            checkpoint = torch.load( config.args['model_path'])
+            checkpoint = torch.load(config.args['model_path'])
         netG_state_dict = checkpoint['state_dict']
         netG = hg8(input_nc=4, output_nc=51)
         netG.load_state_dict(netG_state_dict)

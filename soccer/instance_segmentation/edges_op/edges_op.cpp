@@ -19,8 +19,10 @@ class EdgeDetectionKernel : public scanner::Kernel, public scanner::VideoKernel 
   EdgeDetectionKernel(const scanner::KernelConfig& config)
       : scanner::Kernel(config) {
 
+    MySegmentArgs args;
+    args.ParseFromArray(config.args.data(), config.args.size());
     auto start = scanner::now();
-    pDollar_ = cv::ximgproc::createStructuredEdgeDetection("/home/krematas/code/scannerapps/model.yml");
+    pDollar_ = cv::ximgproc::createStructuredEdgeDetection(args.model_path());
     if (profiler_) {
       profiler_->add_interval("constructor", start, scanner::now());
     }
@@ -88,7 +90,7 @@ class EdgeDetectionKernel : public scanner::Kernel, public scanner::VideoKernel 
   cv::Ptr<cv::ximgproc::StructuredEdgeDetection> pDollar_;
 };
 
-REGISTER_OP(EdgeDetection).frame_input("frame").output("frame").protobuf_name("Image");
+REGISTER_OP(EdgeDetection).frame_input("frame").output("frame").protobuf_name("MySegmentArgs");
 
 REGISTER_KERNEL(EdgeDetection, EdgeDetectionKernel)
     .device(scanner::DeviceType::CPU)

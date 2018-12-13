@@ -106,3 +106,4 @@ venv.bak/
 
 # Generated files
 *.mp4
+*.pth

@@ -87,7 +87,7 @@ else:
         os.path.join(cwd, 'segment_op/build/libsegment_op.so'),
         os.path.join(cwd, 'segment_op/build/segment_pb2.py'))
 
-model_path = '/home/krematas/code/scannerapps/edge_model.yml.gz'
+model_path = '/home/krematas/code/scannerapps/model.yml.gz'
 
 config = db.config.config['storage']
 params = {'bucket': opt.bucket,

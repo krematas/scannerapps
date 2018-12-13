@@ -168,7 +168,7 @@ else:
         os.path.join(cwd, 'segment_op/build/libsegment_op.so'),
         os.path.join(cwd, 'segment_op/build/segment_pb2.py'))
 
-model_path = 'edge_model.yml.gz'
+model_path = 'model.yml.gz'
 
 my_segment_imageset_class = db.ops.MySegment(
     frame=img, mask=pose_img,

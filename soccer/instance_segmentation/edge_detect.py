@@ -102,7 +102,7 @@ if __name__ == '__main__':
     encoded_image = db.sources.Files(**params)
     frame = db.ops.ImageDecoder(img=encoded_image)
 
-    my_edge_detection_class = db.ops.EdgeDetection(frame=frame, model_path='edge_model.yml.gz')
+    my_edge_detection_class = db.ops.EdgeDetection(frame=frame, model_path='model.yml.gz')
     output_op = db.sinks.FrameColumn(columns={'frame': my_edge_detection_class})
 
     job = Job(

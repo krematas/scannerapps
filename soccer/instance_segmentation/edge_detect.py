@@ -44,7 +44,6 @@ if __name__ == '__main__':
     else:
         image_files = glob.glob(join(dataset, 'players', 'images', '*.jpg'))
 
-    print('Total files: {0}'.format(len(image_files)))
     image_files.sort()
     if opt.total_files > 0:
         image_files = image_files[:opt.total_files]
@@ -74,8 +73,8 @@ if __name__ == '__main__':
     else:
         db = Database()
 
-    # cwd = os.path.dirname(os.path.abspath(__file__))
-    cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/'
+    cwd = os.path.dirname(os.path.abspath(__file__))
+    # cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation/'
     if not os.path.isfile(os.path.join(cwd, 'edges_op/build/libedges_op.so')):
         print(
             'You need to build the custom op first: \n'
@@ -111,6 +110,8 @@ if __name__ == '__main__':
             encoded_image: {'paths': image_files, **params},
             output_op: 'example_resized',
         })
+
+    print('Total files: {0}'.format(len(image_files)))
 
     start = time.time()
     [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,

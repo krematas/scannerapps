@@ -44,6 +44,7 @@ if __name__ == '__main__':
     else:
         image_files = glob.glob(join(dataset, 'players', 'images', '*.jpg'))
 
+    print('Total files: {0}'.format(len(image_files)))
     image_files.sort()
     if opt.total_files > 0:
         image_files = image_files[:opt.total_files]

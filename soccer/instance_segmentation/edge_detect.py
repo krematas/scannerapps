@@ -86,9 +86,7 @@ if __name__ == '__main__':
     # shared library we compiled. If the op takes arguments, it also optionally
     # takes a path to the generated python file for the arg protobuf.
     if opt.cloud:
-        db.load_op(
-            '/app/instance_segmentation/edges_op/build/libedges_op.so',
-            os.path.join(cwd, 'instance_segmentation/edges_op/build/edges_pb2.py'))
+        db.load_op('/app/edges_op/build/libedges_op.so', os.path.join(cwd, 'edges_op/build/edges_pb2.py'))
     else:
         db.load_op(
             os.path.join(cwd, 'edges_op/build/libedges_op.so'),

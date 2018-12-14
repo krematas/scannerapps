@@ -5,7 +5,6 @@ RUN curl https://sdk.cloud.google.com | bash
 RUN wget https://storage.googleapis.com/pub/gsutil.tar.gz && tar -zxf gsutil.tar.gz  -C $HOME
 ENV PATH /root/google-cloud-sdk/bin:$PATH
 
-COPY model.pth /app/model.pth
 COPY model.yml.gz /app/model.yml.gz
 
 # Install python requirements
@@ -20,8 +19,10 @@ COPY depth/* /app/
 
 # Build segment kernel
 COPY instance_segmentation/*.py /app/
-COPY instance_segmentation/segment_op segment_op
-RUN cd segment_op && mkdir -p build && cd build && rm -fr * && cmake .. && make
+COPY instance_segmentation/edges_op edges_op
+RUN cd edges_op && mkdir -p build && cd build && rm -fr * && cmake .. && make
+COPY instance_segmentation/instancesegm_op instancesegm_op
+RUN cd instancesegm_op && mkdir -p build && cd build && rm -fr * && cmake .. && make
 
 COPY config.toml /root/.scanner/config.toml
 

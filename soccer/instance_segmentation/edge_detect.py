@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 from scannerpy import Database, Job
-import soccer.instance_segmentation.edges_op.build.edges_pb2 as edges_pb2
+import edges_op.build.edges_pb2 as edges_pb2
 import time
 from os.path import join, basename
 import glob
@@ -109,7 +109,6 @@ if __name__ == '__main__':
             encoded_image: {'paths': image_files, **params},
             output_op: 'example_resized',
         })
-
 
     start = time.time()
     [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,

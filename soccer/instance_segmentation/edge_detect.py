@@ -117,8 +117,11 @@ if __name__ == '__main__':
     end = time.time()
     print('Total time for edge detection in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-    # out_table.profiler().write_trace(join(dataset, 'hist.trace'))
-    # print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
+    tracename = 'edge.trace'
+    if opt.cloud:
+        tracename = 'edge-cloud.trace'
+    out_table.profiler().write_trace(join(dataset, tracename))
+    print('Trace saved in {0}'.format(join(dataset, tracename)))
 
     if opt.save:
         results = out_table.column('frame').load()

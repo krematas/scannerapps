@@ -79,8 +79,8 @@ if opt.cloud:
 
     master = '{}:{}'.format(ip, port)
     print(master)
-    db = Database(master=master, start_cluster=False, config_path='./config.toml',
-                  grpc_timeout=60)
+    db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
+    print('db was created.')
 else:
     db = Database()
 
@@ -141,8 +141,11 @@ start = time.time()
 end = time.time()
 print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-# out_table.profiler().write_trace(join(dataset, 'hist.trace'))
-# print('Trace saved in {0}'.format(join(dataset, 'hist.trace')))
+tracename = 'instance.trace'
+if opt.cloud:
+    tracename = 'instance-cloud.trace'
+out_table.profiler().write_trace(join(dataset, tracename))
+print('Trace saved in {0}'.format(join(dataset, tracename)))
 
 # results = out_table.column('frame').load()
 

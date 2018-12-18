@@ -141,11 +141,11 @@ start = time.time()
 end = time.time()
 print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-tracename = 'instance.trace'
+tracename = join(dataset, 'instance.trace')
 if opt.cloud:
     tracename = 'instance-cloud.trace'
-out_table.profiler().write_trace(join(dataset, tracename))
-print('Trace saved in {0}'.format(join(dataset, tracename)))
+out_table.profiler().write_trace(tracename)
+print('Trace saved in {0}'.format(tracename))
 
 # results = out_table.column('frame').load()
 

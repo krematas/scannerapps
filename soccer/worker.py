@@ -8,6 +8,7 @@ mp = bindings.default_machine_params()
 mp_proto = metadata_types.MachineParameters()
 mp_proto.ParseFromString(mp)
 mp_proto.num_load_workers = 32
+mp_proto.num_save_workers = 32
 mp = mp_proto.SerializeToString()
 
 scannerpy.start_worker(

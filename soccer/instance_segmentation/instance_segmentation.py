@@ -1,3 +1,4 @@
+import scannerpy._python as bindings
 import scannerpy
 import cv2
 import numpy as np
@@ -31,6 +32,7 @@ if opt.pipeline_instances_per_node < 0:
 dataset = opt.path_to_data
 
 if opt.cloud:
+
     def get_paths(path):
         paths = sp.check_output('gsutil ls gs://{:s}/{:s}'.format(opt.bucket, path),
                                 shell=True).strip().decode('utf-8')
@@ -79,7 +81,10 @@ if opt.cloud:
 
     master = '{}:{}'.format(ip, port)
     print(master)
-    db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
+    mp = bindings.default_machine_params()
+    mp.num_load_workers = 32
+    db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60, machine_params=mp)
+    # db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
     print('db was created.')
 else:
     db = Database()

@@ -1,5 +1,5 @@
-import scannerpy._python as bindings
-import scanner.metadata_pb2 as metadata_types
+# import scannerpy._python as bindings
+# import scanner.metadata_pb2 as metadata_types
 import scannerpy
 import cv2
 import numpy as np
@@ -82,13 +82,13 @@ if opt.cloud:
 
     master = '{}:{}'.format(ip, port)
     print(master)
-    mp = bindings.default_machine_params()
-    mp_proto = metadata_types.MachineParameters()
-    mp_proto.ParseFromString(mp)
-    mp_proto.num_load_workers = 32
-    mp = mp_proto.SerializeToString()
-    db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60, machine_params=mp)
-    # db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
+    # mp = bindings.default_machine_params()
+    # mp_proto = metadata_types.MachineParameters()
+    # mp_proto.ParseFromString(mp)
+    # mp_proto.num_load_workers = 32
+    # mp = mp_proto.SerializeToString()
+    # db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60, machine_params=mp)
+    db = Database(master=master, start_cluster=False, config_path='./config.toml', grpc_timeout=60)
     print('db was created.')
 else:
     db = Database()

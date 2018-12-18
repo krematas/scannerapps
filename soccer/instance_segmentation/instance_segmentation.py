@@ -24,6 +24,7 @@ parser.add_argument('--total_files', type=int, default=-1)
 parser.add_argument('--work_packet_size', type=int, default=2)
 parser.add_argument('--io_packet_size', type=int, default=4)
 parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
+parser.add_argument('--tasks_in_queue_per_pu', type=int, default=1)
 
 opt, _ = parser.parse_known_args()
 
@@ -146,7 +147,7 @@ job = Job(
 start = time.time()
 [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
                      io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
-                     tasks_in_queue_per_pu=1)
+                     tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
 end = time.time()
 print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 

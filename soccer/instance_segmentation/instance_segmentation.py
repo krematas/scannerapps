@@ -1,5 +1,3 @@
-# import scannerpy._python as bindings
-# import scanner.metadata_pb2 as metadata_types
 import scannerpy
 import cv2
 import numpy as np
@@ -15,7 +13,7 @@ import subprocess as sp
 import argparse
 
 parser = argparse.ArgumentParser(description='Depth estimation using Stacked Hourglass')
-parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/barcelona/')
+parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/emil-forsberg-goal-sweden-v-switzerland-match-55')
 parser.add_argument('--visualize', action='store_true')
 parser.add_argument('--cloud', action='store_true')
 parser.add_argument('--bucket', default='', type=str)
@@ -94,7 +92,8 @@ if opt.cloud:
 else:
     db = Database()
 
-cwd = os.path.dirname(os.path.abspath(__file__))
+# cwd = os.path.dirname(os.path.abspath(__file__))
+cwd = '/home/krematas/code/scannerapps/soccer/instance_segmentation'
 if not os.path.isfile(os.path.join(cwd, 'instancesegm_op/build/libinstancesegm_op.so')):
     print(
         'You need to build the custom op first: \n'
@@ -122,14 +121,35 @@ params = {'bucket': opt.bucket,
 
 
 encoded_image = db.sources.Files(**params)
+encoded_poseimg = db.sources.Files(**params)
+encoded_edges = db.sources.Files(**params)
+
+output_op = db.sinks.FrameColumn(columns={'image': encoded_image, 'poseimg': encoded_poseimg, 'edges': encoded_edges})
+
+
+job = Job(
+    op_args={
+        encoded_image: {'paths': image_files, **params},
+        encoded_poseimg: {'paths': poseimg_files, **params},
+        encoded_edges: {'paths': edge_files, **params},
+
+        output_op: 'dummy_save',
+    })
+
+
+[out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
+                     io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
+                     tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
+
+
+encoded_image = db.sources.FrameColumn()
 frame = db.ops.ImageDecoder(img=encoded_image)
 
-encoded_poseimg = db.sources.Files(**params)
+encoded_poseimg = db.sources.FrameColumn()
 poseimg_frame = db.ops.ImageDecoder(img=encoded_poseimg)
 
-encoded_edges = db.sources.Files(**params)
+encoded_edges = db.sources.FrameColumn()
 edge_frame = db.ops.ImageDecoder(img=encoded_edges)
-
 
 my_segment_imageset_class = db.ops.InstanceSegment(frame=frame, poseimg=poseimg_frame, edges=edge_frame,
                                                    sigma1=1.0, sigma2=0.01)
@@ -137,9 +157,9 @@ output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
 
 job = Job(
     op_args={
-        encoded_image: {'paths': image_files, **params},
-        encoded_poseimg: {'paths': poseimg_files, **params},
-        encoded_edges: {'paths': edge_files, **params},
+        encoded_image: db.table('dummy_save').column('image'),
+        encoded_poseimg: db.table('dummy_save').column('poseimg'),
+        encoded_edges: db.table('dummy_save').column('edges'),
 
         output_op: 'example_resized',
     })

@@ -21,6 +21,7 @@ if __name__ == '__main__':
     parser.add_argument('--work_packet_size', type=int, default=2)
     parser.add_argument('--io_packet_size', type=int, default=4)
     parser.add_argument('--pipeline_instances_per_node', type=int, default=1)
+    parser.add_argument('--tasks_in_queue_per_pu', type=int, default=1)
     parser.add_argument('--save', action='store_true')
 
     opt, _ = parser.parse_known_args()
@@ -99,6 +100,19 @@ if __name__ == '__main__':
               'region': 'US'}
 
     encoded_image = db.sources.Files(**params)
+
+    output_op = db.sinks.FrameColumn(columns={'image': encoded_image})
+
+    job = Job(
+        op_args={
+            encoded_image: {'paths': image_files, **params},
+            output_op: 'edge_detect',
+        })
+
+    [_out_table] = db.run(output_op, [job], force=True, tasks_in_queue_per_pu=1)
+    print(db.summarize())
+
+    encoded_image = db.sources.FrameColumn()
     frame = db.ops.ImageDecoder(img=encoded_image)
 
     my_edge_detection_class = db.ops.EdgeDetection(frame=frame, model_path='model.yml.gz')
@@ -106,14 +120,14 @@ if __name__ == '__main__':
 
     job = Job(
         op_args={
-            encoded_image: {'paths': image_files, **params},
-            output_op: 'example_resized',
+            encoded_image: db.table('edge_detect').column('image'),
+            output_op: 'edge_output',
         })
 
     start = time.time()
     [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
                          io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
-                         tasks_in_queue_per_pu=1)
+                         tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
     end = time.time()
     print('Total time for edge detection in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 

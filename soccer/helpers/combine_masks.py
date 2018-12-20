@@ -47,23 +47,19 @@ if __name__ == '__main__':
             return stripped_paths
 
 
-        image_files = get_paths(join(dataset, 'players', 'images', '*.jpg'))
-        poseimg_files = get_paths(join(dataset, 'players', 'poseimgs', '*.png'))
-        edge_files = get_paths(join(dataset, 'players', 'edges', '*.png'))
+        cnn_files = get_paths(join(dataset, 'players', 'cnn_masks', '*.png'))
+        inst_files = get_paths(join(dataset, 'players', 'instance_masks', '*.png'))
 
     else:
-        image_files = glob.glob(join(dataset, 'players', 'images', '*.jpg'))
-        poseimg_files = glob.glob(join(dataset, 'players', 'poseimgs', '*.png'))
-        edge_files = glob.glob(join(dataset, 'players', 'edges', '*.png'))
+        cnn_files = glob.glob(join(dataset, 'players', 'cnn_masks', '*.png'))
+        inst_files = glob.glob(join(dataset, 'players', 'instance_masks', '*.png'))
 
-    image_files.sort()
-    poseimg_files.sort()
-    edge_files.sort()
+    cnn_files.sort()
+    inst_files.sort()
 
     if opt.total_files > 0:
-        image_files = image_files[:opt.total_files]
-        poseimg_files = poseimg_files[:opt.total_files]
-        edge_files = edge_files[:opt.total_files]
+        cnn_files = cnn_files[:opt.total_files]
+        inst_files = inst_files[:opt.total_files]
 
     if opt.cloud:
         print('Finding master IP...')
@@ -126,11 +122,10 @@ if __name__ == '__main__':
 
     job = Job(
         op_args={
-            encoded_image: {'paths': image_files, **params},
-            encoded_poseimg: {'paths': poseimg_files, **params},
-            encoded_edges: {'paths': edge_files, **params},
+            encoded_image: {'paths': cnn_files, **params},
+            encoded_poseimg: {'paths': inst_files, **params},
 
-            output_op: 'instance_segmentation',
+            output_op: 'masks',
         })
 
     start = time.time()
@@ -140,12 +135,6 @@ if __name__ == '__main__':
     end = time.time()
     print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
 
-    tracename = join(dataset, 'instance.trace')
-    if opt.cloud:
-        tracename = 'instance-cloud.trace'
-    out_table.profiler().write_trace(tracename)
-    print('Trace saved in {0}'.format(tracename))
-
     if opt.save:
 
         def mkdir(path_to_dir):
@@ -153,7 +142,7 @@ if __name__ == '__main__':
                 os.mkdir(path_to_dir)
 
         mkdir(join(dataset, 'players'))
-        mkdir(join(dataset, 'players', 'instance_masks'))
+        mkdir(join(dataset, 'players', 'masks'))
 
         start = time.time()
         results = out_table.column('frame').load()
@@ -163,23 +152,7 @@ if __name__ == '__main__':
             nparr = np.fromstring(my_image.image_data, np.uint8)
             instance_mask = nparr.reshape((my_image.h, my_image.w))
 
-            framename = basename(image_files[i])[:-4]
-            cv2.imwrite(join(dataset, 'players', 'instance_masks', '{0}.png'.format(framename)), instance_mask)
+            framename = basename(cnn_files[i])[:-4]
+            cv2.imwrite(join(dataset, 'players', 'masks', '{0}.png'.format(framename)), instance_mask)
         end = time.time()
         print('Files saved in {0:.3f} secs'.format(end-start))
-
-    #
-    # import matplotlib.pyplot as plt
-    #
-    # for i, res in enumerate(results):
-    #     my_image = instancesegm_pb2.ProtoImage()
-    #     my_image.ParseFromString(res)
-    #     nparr = np.fromstring(my_image.image_data, np.uint8)
-    #     instance_mask = nparr.reshape((my_image.h, my_image.w))
-    #     plt.imshow(instance_mask)
-    #     plt.show()
-    #     print(i, my_image.w)
-    # break
-
-
-    # my_image = segment_pb2.MyImage()

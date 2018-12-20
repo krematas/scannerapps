@@ -1,17 +1,14 @@
 import scannerpy
 import cv2
 import numpy as np
-from scannerpy import Database, DeviceType, Job, ColumnType, FrameType
-from scannerpy.stdlib import pipelines
+from scannerpy import Database, DeviceType, Job, FrameType
 import time
-
+import pickle
 from os.path import join, basename
 import glob
 import os
 import subprocess as sp
-
 import argparse
-import soccer.instance_segmentation.instancesegm_op.build.instancesegm_pb2 as instancesegm_pb2
 
 if __name__ == '__main__':
 
@@ -86,44 +83,32 @@ if __name__ == '__main__':
     else:
         db = Database()
 
-    cwd = os.path.dirname(os.path.abspath(__file__))
-    if not os.path.isfile(os.path.join(cwd, 'instancesegm_op/build/libinstancesegm_op.so')):
-        print(
-            'You need to build the custom op first: \n'
-            '$ pushd {}/instancesegm_op; mkdir build && cd build; cmake ..; make; popd'.format(cwd))
-        exit()
-
-    if opt.cloud:
-        db.load_op(
-            '/app/instancesegm_op/build/libinstancesegm_op.so',
-            os.path.join(cwd, 'instancesegm_op/build/instancesegm_pb2.py'))
-    else:
-        db.load_op(
-            os.path.join(cwd, 'instancesegm_op/build/libinstancesegm_op.so'),
-            os.path.join(cwd, 'instancesegm_op/build/instancesegm_pb2.py'))
-
     config = db.config.config['storage']
     params = {'bucket': opt.bucket,
               'storage_type': config['type'],
               'endpoint': 'storage.googleapis.com',
               'region': 'US'}
 
-    encoded_image = db.sources.Files(**params)
-    encoded_poseimg = db.sources.Files(**params)
-    encoded_edges = db.sources.Files(**params)
+    encoded_cnn_files = db.sources.Files(**params)
+    encoded_inst_files = db.sources.Files(**params)
 
-    frame = db.ops.ImageDecoder(img=encoded_image)
-    poseimg_frame = db.ops.ImageDecoder(img=encoded_poseimg)
-    edge_frame = db.ops.ImageDecoder(img=encoded_edges)
+    cnn_frame = db.ops.ImageDecoder(img=encoded_cnn_files)
+    inst_frame = db.ops.ImageDecoder(img=encoded_inst_files)
 
-    my_segment_imageset_class = db.ops.InstanceSegment(frame=frame, poseimg=poseimg_frame, edges=edge_frame,
-                                                       sigma1=1.0, sigma2=0.01)
-    output_op = db.sinks.FrameColumn(columns={'frame': my_segment_imageset_class})
+
+    @scannerpy.register_python_op(device_type=DeviceType.CPU)
+    def device_combine_masks(config, cnn_mask: FrameType, inst_mask: FrameType) -> bytes:
+        out = cnn_mask*inst_mask
+        return pickle.dumps(out)
+
+
+    combined_mask = db.ops.device_combine_masks(cnn_mask=cnn_frame, inst_mask=inst_frame)
+    output_op = db.sinks.FrameColumn(columns={'frame': combined_mask})
 
     job = Job(
         op_args={
-            encoded_image: {'paths': cnn_files, **params},
-            encoded_poseimg: {'paths': inst_files, **params},
+            encoded_cnn_files: {'paths': cnn_files, **params},
+            encoded_inst_files: {'paths': inst_files, **params},
 
             output_op: 'masks',
         })
@@ -133,7 +118,7 @@ if __name__ == '__main__':
                          io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
                          tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
     end = time.time()
-    print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
+    print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(cnn_files)))
 
     if opt.save:
 
@@ -147,12 +132,11 @@ if __name__ == '__main__':
         start = time.time()
         results = out_table.column('frame').load()
         for i, res in enumerate(results):
-            my_image = instancesegm_pb2.ProtoImage()
-            my_image.ParseFromString(res)
-            nparr = np.fromstring(my_image.image_data, np.uint8)
-            instance_mask = nparr.reshape((my_image.h, my_image.w))
 
+            buff = pickle.loads(res)
+            if i == 0:
+                print(buff.shape)
             framename = basename(cnn_files[i])[:-4]
-            cv2.imwrite(join(dataset, 'players', 'masks', '{0}.png'.format(framename)), instance_mask)
+            cv2.imwrite(join(dataset, 'players', 'masks', '{0}.png'.format(framename)), buff*255)
         end = time.time()
         print('Files saved in {0:.3f} secs'.format(end-start))

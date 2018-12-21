@@ -44,7 +44,7 @@ if __name__ == '__main__':
         def execute(self, frame: Sequence[FrameType], mask: Sequence[FrameType]) -> Sequence[FrameType]:
             batch_size = len(frame)
             print(len(frame), len(mask), frame[0].shape, mask[0].shape)
-            # out = []
+            out = imresize(mask[0][:, :, 0], (self.img_size, self.img_size), interp='nearest', mode='F')
             # for i in range(batch_size):
             #     image = imresize(frame[i], (self.img_size, self.img_size))
             #     mask = imresize(mask[i], (self.img_size, self.img_size), interp='nearest', mode='F')

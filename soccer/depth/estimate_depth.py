@@ -59,7 +59,7 @@ if __name__ == '__main__':
 
         def execute(self, image: Sequence[FrameType], mask: Sequence[FrameType]) -> Sequence[FrameType]:
 
-            batch_size = len(frame)
+            batch_size = len(image)
             cur_batch = torch.zeros([batch_size, 4, self.img_size, self.img_size], dtype=torch.float32)
 
             for i in range(batch_size):

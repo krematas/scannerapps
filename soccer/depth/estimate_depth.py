@@ -9,6 +9,7 @@ import glob
 import torch
 import torch.nn as nn
 from torchvision import transforms
+from typing import Sequence
 
 from soccer.depth.hourglass import hg8
 import matplotlib.pyplot as plt
@@ -27,11 +28,13 @@ if __name__ == '__main__':
     parser.add_argument('--visualize', action='store_true')
     parser.add_argument('--cloud', action='store_true')
     parser.add_argument('--bucket', default='', type=str)
+    parser.add_argument('--work_packet_size', type=int, default=2)
+    parser.add_argument('--io_packet_size', type=int, default=4)
 
     opt, _ = parser.parse_known_args()
 
 
-    @scannerpy.register_python_op(device_type=DeviceType.GPU)
+    @scannerpy.register_python_op(device_sets=[(DeviceType.CPU, -1), (DeviceType.GPU, 1)], batch=20)
     class MyDepthEstimationClass(scannerpy.Kernel):
         def __init__(self, config):
             if opt.cloud:
@@ -49,39 +52,61 @@ if __name__ == '__main__':
 
             self.img_size = config.args['img_size']
             self.net = netG
+            pass
 
-        def execute(self, image: FrameType, mask: FrameType) -> FrameType:
+        def close(self):
+            pass
 
+        def execute(self, image: Sequence[FrameType], mask: Sequence[FrameType]) -> Sequence[FrameType]:
+
+            batch_size = len(frame)
+            batch = torch.zeros([batch_size, 4, self.img_size, self.img_size], dtype=torch.float32)
+
+            for i in range(batch_size):
+                _image = imresize(image[i], (self.img_size, self.img_size))
+                _mask = imresize(mask[i][:, :, 0], (self.img_size, self.img_size), interp='nearest', mode='F')
+
+                # ToTensor
+                _image = _image.transpose((2, 0, 1)) / 255.0
+                _mask = _mask[:, :, None].transpose((2, 0, 1)) / 255.0
+
+                image_tensor = torch.from_numpy(_image)
+                image_tensor = torch.FloatTensor(image_tensor.size()).copy_(image_tensor)
+                image_tensor = self.normalize(image_tensor)
+                mask_tensor = torch.from_numpy(_mask)
+
+                batch[i, :, :, :] = torch.cat((image_tensor, mask_tensor), 0)
+            batch = batch.cuda()
             # Rescale
-            image = imresize(image, (self.img_size, self.img_size))
-            mask = imresize(mask[:, :, 0], (self.img_size, self.img_size), interp='nearest', mode='F')
+            # _image = imresize(image, (self.img_size, self.img_size))
+            # _mask = imresize(mask[:, :, 0], (self.img_size, self.img_size), interp='nearest', mode='F')
+            #
+            # # ToTensor
+            # _image = _image.transpose((2, 0, 1))/255.0
+            # _mask = _mask[:, :, None].transpose((2, 0, 1))/255.0
+            #
+            # image_tensor = torch.from_numpy(_image)
+            # image_tensor = torch.FloatTensor(image_tensor.size()).copy_(image_tensor)
+            # mask_tensor = torch.from_numpy(_mask)
+            #
+            # # Normalize
+            # image_tensor = self.normalize(image_tensor)
+            #
+            # # Make it BxCxHxW
+            # image_tensor = image_tensor.unsqueeze(0)
+            # mask_tensor = mask_tensor.unsqueeze(0)
+            #
+            # # Concat input and mask
+            # image_tensor = torch.cat((image_tensor.float(), mask_tensor.float()), 1)
+            # image_tensor = image_tensor.cuda()
 
-            # ToTensor
-            image = image.transpose((2, 0, 1))/255.0
-            mask = mask[:, :, None].transpose((2, 0, 1))/255.0
-
-            image_tensor = torch.from_numpy(image)
-            image_tensor = torch.FloatTensor(image_tensor.size()).copy_(image_tensor)
-            mask_tensor = torch.from_numpy(mask)
-
-            # Normalize
-            image_tensor = self.normalize(image_tensor)
-
-            # Make it BxCxHxW
-            image_tensor = image_tensor.unsqueeze(0)
-            mask_tensor = mask_tensor.unsqueeze(0)
-
-            # Concat input and mask
-            image_tensor = torch.cat((image_tensor.float(), mask_tensor.float()), 1)
-            image_tensor = image_tensor.cuda()
-
-            output = self.net(image_tensor)
+            output = self.net(batch)
             final_prediction = self.logsoftmax(output[-1])
 
             np_prediction = final_prediction.cpu().detach().numpy()
-            np_prediction = np_prediction[0, :, :, :]
+            np_prediction_list = [np_prediction[0, :, :, :].astype(np.float32) for i in range(batch_size)]
 
-            return np_prediction.astype(np.float32)
+            return np_prediction_list
 
     dataset = opt.path_to_data
 
@@ -154,19 +179,20 @@ if __name__ == '__main__':
         })
 
     start = time.time()
-    [out_table] = db.run(output_op, [job], force=True, work_packet_size=8, io_packet_size=16)
+    [out_table] = db.run(output_op, [job], force=True, work_packet_size=opt.work_packet_size,
+                         io_packet_size=opt.io_packet_size)
     end = time.time()
     print('Total time for depth estimation in scanner: {0:.3f} sec'.format(end-start))
 
-    results = out_table.column('frame').load()
-
-    path_to_save = join(dataset, 'players', 'prediction_scanner')
-    if not os.path.exists(path_to_save):
-        os.mkdir(path_to_save)
-
-    for i, res in enumerate(results):
-        pred_scanner = np.argmax(res, axis=0)
-        np.save(join(path_to_save, '{0:05d}.npy'.format(i)), res)
+    # results = out_table.column('frame').load()
+    #
+    # path_to_save = join(dataset, 'players', 'prediction_scanner')
+    # if not os.path.exists(path_to_save):
+    #     os.mkdir(path_to_save)
+    #
+    # for i, res in enumerate(results):
+    #     pred_scanner = np.argmax(res, axis=0)
+    #     np.save(join(path_to_save, '{0:05d}.npy'.format(i)), res)
 
         # if opt.visualize:
         #     # Visualization

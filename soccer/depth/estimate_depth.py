@@ -34,7 +34,7 @@ if __name__ == '__main__':
     opt, _ = parser.parse_known_args()
 
 
-    @scannerpy.register_python_op(device_sets=[(DeviceType.CPU, -1), (DeviceType.GPU, 1)], batch=20)
+    @scannerpy.register_python_op(device_type=DeviceType.GPU, batch=20)
     class MyDepthEstimationClass(scannerpy.Kernel):
         def __init__(self, config):
             if opt.cloud:
@@ -60,7 +60,7 @@ if __name__ == '__main__':
         def execute(self, image: Sequence[FrameType], mask: Sequence[FrameType]) -> Sequence[FrameType]:
 
             batch_size = len(frame)
-            batch = torch.zeros([batch_size, 4, self.img_size, self.img_size], dtype=torch.float32)
+            cur_batch = torch.zeros([batch_size, 4, self.img_size, self.img_size], dtype=torch.float32)
 
             for i in range(batch_size):
                 _image = imresize(image[i], (self.img_size, self.img_size))
@@ -75,8 +75,8 @@ if __name__ == '__main__':
                 image_tensor = self.normalize(image_tensor)
                 mask_tensor = torch.from_numpy(_mask)
 
-                batch[i, :, :, :] = torch.cat((image_tensor, mask_tensor), 0)
-            batch = batch.cuda()
+                cur_batch[i, :, :, :] = torch.cat((image_tensor, mask_tensor), 0)
+            cur_batch = cur_batch.cuda()
             # Rescale
             # _image = imresize(image, (self.img_size, self.img_size))
             # _mask = imresize(mask[:, :, 0], (self.img_size, self.img_size), interp='nearest', mode='F')
@@ -100,11 +100,11 @@ if __name__ == '__main__':
             # image_tensor = torch.cat((image_tensor.float(), mask_tensor.float()), 1)
             # image_tensor = image_tensor.cuda()
 
-            output = self.net(batch)
+            output = self.net(cur_batch)
             final_prediction = self.logsoftmax(output[-1])
 
             np_prediction = final_prediction.cpu().detach().numpy()
-            np_prediction_list = [np_prediction[0, :, :, :].astype(np.float32) for i in range(batch_size)]
+            np_prediction_list = [np_prediction[i, :, :, :].astype(np.float32) for i in range(batch_size)]
 
             return np_prediction_list
 
@@ -167,8 +167,7 @@ if __name__ == '__main__':
     mask_frame = db.ops.ImageDecoder(img=encoded_mask)
 
     my_depth_estimation_class = db.ops.MyDepthEstimationClass(image=frame, mask=mask_frame,
-                                                              img_size=256, model_path=model_path,
-                                                              device=DeviceType.GPU)
+                                                              img_size=256, model_path=model_path, batch=20)
     output_op = db.sinks.FrameColumn(columns={'frame': my_depth_estimation_class})
 
     job = Job(

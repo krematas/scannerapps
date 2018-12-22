@@ -167,7 +167,8 @@ if __name__ == '__main__':
     mask_frame = db.ops.ImageDecoder(img=encoded_mask)
 
     my_depth_estimation_class = db.ops.MyDepthEstimationClass(image=frame, mask=mask_frame,
-                                                              img_size=256, model_path=model_path, batch=20)
+                                                              img_size=256, model_path=model_path,
+                                                              device=DeviceType.GPU, batch=20)
     output_op = db.sinks.FrameColumn(columns={'frame': my_depth_estimation_class})
 
     job = Job(

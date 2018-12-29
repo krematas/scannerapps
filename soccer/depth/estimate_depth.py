@@ -26,6 +26,7 @@ if __name__ == '__main__':
     parser.add_argument('--path_to_data', default='/home/krematas/Mountpoints/grail/data/Singleview/Soccer/Russia2018/emil-forsberg-goal-sweden-v-switzerland-match-55')
     parser.add_argument('--path_to_model', default='/home/krematas/Mountpoints/grail/tmp/cnn/model.pth')
     parser.add_argument('--visualize', action='store_true')
+    parser.add_argument('--total_files', type=int, default=-1)
     parser.add_argument('--cloud', action='store_true')
     parser.add_argument('--bucket', default='', type=str)
     parser.add_argument('--work_packet_size', type=int, default=2)
@@ -126,6 +127,10 @@ if __name__ == '__main__':
 
     image_files.sort()
     mask_files.sort()
+
+    if opt.total_files > 0:
+        image_files = image_files[:opt.total_files]
+        mask_files = mask_files[:opt.total_files]
 
     model_path = opt.path_to_model
 

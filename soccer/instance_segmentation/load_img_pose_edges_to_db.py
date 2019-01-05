@@ -94,9 +94,13 @@ if __name__ == '__main__':
     encoded_poseimg = db.sources.Files(**params)
     encoded_edges = db.sources.Files(**params)
 
-    output_op = db.sinks.FrameColumn(columns={'image': encoded_image,
-                                              'poseimg': encoded_poseimg,
-                                              'edges': encoded_edges})
+    encoded_image2 = db.ops.Pass(input=encoded_image)
+    encoded_poseimg2 = db.ops.Pass(input=encoded_poseimg)
+    encoded_edges2 = db.ops.Pass(input=encoded_edges)
+
+    output_op = db.sinks.Column(columns={'image': encoded_image2,
+                                              'poseimg': encoded_poseimg2,
+                                              'edges': encoded_edges2})
 
     job = Job(
         op_args={

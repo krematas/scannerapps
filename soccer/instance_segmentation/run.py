@@ -52,7 +52,10 @@ if __name__ == '__main__':
     encoded_poseimg = db.sources.Files(**params)
     encoded_edges = db.sources.Files(**params)
 
-    output_op = db.sinks.FrameColumn(columns={'image': encoded_image})
+    encoded_image2 = db.ops.Pass(input=encoded_image)
+    output_op = db.sinks.Column(columns={'image': encoded_image2})
+
+    # output_op = db.sinks.FrameColumn(columns={'image': encoded_image})
 
     job = Job(
         op_args={
@@ -64,7 +67,8 @@ if __name__ == '__main__':
 
     print(db.summarize())
 
-    encoded_image2 = db.sources.FrameColumn()
+    encoded_image2 = db.sources.Column()
+    # encoded_image2 = db.sources.FrameColumn()
     frame2 = db.ops.ImageDecoder(img=encoded_image2)
 
     resized_frame = db.ops.device_resize(frame=frame2, width=128, height=128)

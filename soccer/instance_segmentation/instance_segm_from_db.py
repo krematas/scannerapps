@@ -85,40 +85,40 @@ if __name__ == '__main__':
 
     print(db.summarize())
 
-    @scannerpy.register_python_op(device_type=DeviceType.CPU)
-    def device_resize(config, frame: FrameType) -> FrameType:
-        # plt.imshow(frame)
-        # plt.show()
-        return cv2.resize(frame, (config.args['width'], config.args['height']))
+    # @scannerpy.register_python_op(device_type=DeviceType.CPU)
+    # def device_resize(config, frame: FrameType) -> FrameType:
+    #     # plt.imshow(frame)
+    #     # plt.show()
+    #     return cv2.resize(frame, (config.args['width'], config.args['height']))
+    #
+    #
+    # encoded_image2 = db.sources.Column()
+    # frame2 = db.ops.ImageDecoder(img=encoded_image2)
+    #
+    # resized_frame = db.ops.device_resize(frame=frame2, width=128, height=128)
+    # output = db.sinks.FrameColumn(columns={'frame': resized_frame})
+    #
+    # job = Job(op_args={
+    #     encoded_image2: db.table(opt.table_name).column('image'),
+    #     output: 'instance_segmentation'
+    # })
+    #
+    # [table] = db.run(output=output, jobs=[job], force=True, work_packet_size=opt.work_packet_size,
+    #                      io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
+    #                      tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
+    #
+    # # [table] = db.run(output=output, jobs=[job], force=True)
+    #
+    # import sys
+    # sys.exit(-1)
 
-
-    encoded_image2 = db.sources.FrameColumn()
-    frame2 = db.ops.ImageDecoder(img=encoded_image2)
-
-    resized_frame = db.ops.device_resize(frame=frame2, width=128, height=128)
-    output = db.sinks.FrameColumn(columns={'frame': resized_frame})
-
-    job = Job(op_args={
-        encoded_image2: db.table(opt.table_name).column('image'),
-        output: 'instance_segmentation'
-    })
-
-    [table] = db.run(output=output, jobs=[job], force=True, work_packet_size=opt.work_packet_size,
-                         io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
-                         tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
-
-    # [table] = db.run(output=output, jobs=[job], force=True)
-
-    import sys
-    sys.exit(-1)
-
-    encoded_image = db.sources.FrameColumn()
+    encoded_image = db.sources.Column()
     frame = db.ops.ImageDecoder(img=encoded_image)
 
-    encoded_poseimg = db.sources.FrameColumn()
+    encoded_poseimg = db.sources.Column()
     poseimg_frame = db.ops.ImageDecoder(img=encoded_poseimg)
 
-    encoded_edges = db.sources.FrameColumn()
+    encoded_edges = db.sources.Column()
     edge_frame = db.ops.ImageDecoder(img=encoded_edges)
 
     my_segment_imageset_class = db.ops.InstanceSegment(frame=frame, poseimg=poseimg_frame, edges=edge_frame,
@@ -127,9 +127,9 @@ if __name__ == '__main__':
 
     job = Job(
         op_args={
-            encoded_image: db.table('dummy_save5').column('image'),
-            encoded_poseimg: db.table('dummy_save5').column('poseimg'),
-            encoded_edges: db.table('dummy_save5').column('edges'),
+            encoded_image: db.table(opt.table_name).column('image'),
+            encoded_poseimg: db.table(opt.table_name).column('poseimg'),
+            encoded_edges: db.table(opt.table_name).column('edges'),
 
             output_op: 'instance_segmentation',
         })
@@ -139,7 +139,7 @@ if __name__ == '__main__':
                          io_packet_size=opt.io_packet_size, pipeline_instances_per_node=opt.pipeline_instances_per_node,
                          tasks_in_queue_per_pu=opt.tasks_in_queue_per_pu)
     end = time.time()
-    print('Total time for instance segm in scanner: {0:.3f} sec for {1} images'.format(end - start, len(image_files)))
+    print('Total time for instance segm in scanner: {0:.3f} sec'.format(end - start))
 
     tracename = join(dataset, 'instance.trace')
     if opt.cloud:

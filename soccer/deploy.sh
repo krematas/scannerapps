@@ -4,7 +4,7 @@ echo $PROJECT
 
 # sudo usermod -aG docker $USER
 
-TAG=cpu
+TAG=cpu-latest
 docker pull scannerresearch/scanner:$TAG
 docker build -f Dockerfile.master -t gcr.io/$PROJECT/scanner-master:$TAG .
 docker build -f Dockerfile.worker -t gcr.io/$PROJECT/scanner-worker:$TAG .

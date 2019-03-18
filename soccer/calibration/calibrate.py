@@ -114,6 +114,11 @@ if __name__ == '__main__':
     end = time.time()
     print('scanner distance transform: {0:.4f} for {1} frames'.format(end-start, len(image_files)))
 
+    tracename = join(dataset, 'distance_transform.trace')
+    if opt.cloud:
+        tracename = 'distance_transform-cloud.trace'
+    out_table.profiler().write_trace(tracename)
+
     if opt.save:
         # out_table.profiler().write_trace(join(dataset, 'calib.trace'))
         # print('Trace saved in {0}'.format(join(dataset, 'calib.trace')))
